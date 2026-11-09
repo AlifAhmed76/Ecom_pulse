@@ -1,7 +1,7 @@
 # PROGRESS (update at the end of every task)
-Laravel version: (fill in at T00)   PHP: (T00)   Date started: (T00)
+Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started: 2026-11-10
 
-- [ ] T00 Environment & repository
+- [x] T00 Environment & repository — TESTED (3 passed, 0 failed)
 - [ ] T01 Auth, tenancy, roles
 - [ ] T02 Websites & connector credentials
 - [ ] T03 Signed Connector API (heartbeat, events)
@@ -21,4 +21,4 @@ Laravel version: (fill in at T00)   PHP: (T00)   Date started: (T00)
 - [ ] T17 Packaging & final docs
 
 ## Status legend: DESIGNED / IMPLEMENTED / TESTED (command + result) / NOT RUN
-(Agent: record real test output tails here per task.)
+- T00: TESTED (`php -d extension=zip artisan test` -> Tests: 3 passed (5 assertions); `php -d extension=zip artisan migrate --force` on MySQL `lastyear` succeeded; `php artisan serve` HTTP check NOT RUN directly, deferred to T17/owner PC verification).
