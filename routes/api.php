@@ -13,4 +13,12 @@ Route::prefix('v1/connector')
         Route::post('/events', [ConnectorController::class, 'events'])
             ->middleware('connector.auth:events:write')
             ->name('api.connector.events');
+
+        Route::post('/products', [ConnectorController::class, 'products'])
+            ->middleware('connector.auth:products:write')
+            ->name('api.connector.products');
+
+        Route::post('/orders', [ConnectorController::class, 'orders'])
+            ->middleware('connector.auth:orders:write')
+            ->name('api.connector.orders');
     });

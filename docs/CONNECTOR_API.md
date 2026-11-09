@@ -35,6 +35,10 @@ Never reveal which check failed beyond: `missing_headers`, `stale_timestamp`, `b
   Body: `{"connector_version":"1.0.0"}` -> `200 {"ok":true,"api_version":"v1","server_time":"..."}`
 - `POST /api/v1/connector/events` (scope: `events:write`)
   Body: `{"events":[{"id":"...","type":"...","occurred_at":"...","payload":{}}]}` (`1-100` events, payload `<= 64 KB`) -> `202 {"ok":true,"accepted":...,"duplicates":...}`. Idempotent on `(website_id, source_event_id)`.
+- `POST /api/v1/connector/products` (scope: `products:write`)
+  Body: `{"products":[{"id":"...","name":"...","sku?":"...","category?":"...","price?":500,"cost?":300,"stock?":10,"active?":true}]}` (`1-200` items) -> `200 {"ok":true,"created":...,"updated":...}`. Absent optional field keeps existing value.
+- `POST /api/v1/connector/orders` (scope: `orders:write`)
+  Body: `{"orders":[...]}` (`1-100` orders) -> `200 {"ok":true,"created":...,"updated":...,"stale":...}`. Upserts by `(website_id, id)`; ignores older `updated_at` as stale; replaces items cleanly; appends `order_status_history` only when canonical status changes; hashes customer phone/email into `customer_key` and discards raw PII.
 
 ## Sample client
 Run the standalone CLI client against a local server:

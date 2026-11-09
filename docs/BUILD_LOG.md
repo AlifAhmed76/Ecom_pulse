@@ -120,3 +120,20 @@
   - `php -d extension=zip artisan schedule:list` -> 4 schedules listed cleanly (`scheduler-beat`, `worker-beat`, `refresh-all-tenants`, `lyp:prune`).
 - **NOT RUN / UNVERIFIED:** Interactive `run.bat` window launch over 2 minutes on XAMPP PC deferred to owner PC verification / T17.
 - **Status:** `T06 DONE - tests: 50 passed, 0 failed`
+
+## T07: Orders domain and sync API
+**Plan:**
+1. Create migrations & tenant-scoped models for `products`, `customers`, `orders`, `order_items`, `order_status_history`, `employees`, and `order_assignments`, and add `low_stock_threshold` to `config/lyp.php`.
+2. Implement `App\Support\StatusMapper` (`STATUS_MAPPING.md` with EN & বাংলা synonyms + unit tests) and `App\Support\Parse` (numeric, Bangla digit, date, and timezone-aware datetime parsing).
+3. Implement `App\Services\Sync\SyncService` with transactional `lockForUpdate()`, stale-update protection, append-only status history, tenant-salted SHA-256 `customer_key` hashing (discarding raw phone/email), employee assignment, item replacement, and product cost fallback.
+4. Add signed connector endpoints `POST /api/v1/connector/products` (`products:write`) and `POST /api/v1/connector/orders` (`orders:write`) returning `{ok, created, updated[, stale]}` with strict validation (`no items => total required`, `website_id`/`tenant_id` from credential only).
+5. Build read-only `OrderController` (`index` w/ filters, `show` w/ items & status history) and `ProductController` (`index` w/ search & low-stock badge), add nav links & Blade views, write unit & feature tests (incl. N+1 query assertion), run tests & MySQL migrate, update `PROGRESS.md`, and commit.
+
+**Result (T07):**
+- **Files created/changed:** `config/lyp.php`, `database/migrations/2026_11_10_000008..000014_*.php`, `app/Support/{StatusMapper,Parse}.php`, `app/Models/{Product,Customer,Order,OrderItem,OrderStatusHistory,Employee,OrderAssignment}.php`, `app/Services/Sync/SyncService.php`, `app/Http/Controllers/Api/ConnectorController.php`, `app/Http/Controllers/{OrderController,ProductController}.php`, `routes/{api,web}.php`, `public/css/app.css`, `resources/views/layouts/app.blade.php`, `resources/views/dashboard.blade.php`, `resources/views/orders/{index,show}.blade.php`, `resources/views/products/index.blade.php`, `connector-sample/lyp_send.php`, `docs/CONNECTOR_API.md`, `tests/Unit/StatusMapperAndParseTest.php`, `tests/Feature/OrdersSyncAndUiTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `bootstrap/`, `connector-sample/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 110 passed (541 assertions), Duration: 5.05s`.
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> all 7 T07 migrations DONE.
+- **NOT RUN / UNVERIFIED:** Live `connector-sample/lyp_send.php` end-to-end execution against `php artisan serve` deferred to owner PC / T17 final live verification.
+- **Status:** `T07 DONE - tests: 110 passed, 0 failed`

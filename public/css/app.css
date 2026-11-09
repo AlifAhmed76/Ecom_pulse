@@ -907,6 +907,11 @@ td.num {
     gap: 5px;
 }
 
+.alert--inline-note {
+    margin-top: 14px;
+    margin-bottom: 0;
+}
+
 /* Responsive */
 @media (max-width: 860px) {
     .sidebar {

@@ -8,7 +8,7 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - [x] T04 Audit hash-chain log — TESTED (41 passed, 0 failed)
 - [x] T05 Cache layer, MetricsService, System page, plain dashboard — TESTED (46 passed, 0 failed)
 - [x] T06 Scheduler & workers — TESTED (50 passed, 0 failed)
-- [ ] T07 Orders domain + sync API
+- [x] T07 Orders domain + sync API — TESTED (110 passed, 0 failed)
 - [ ] T08 File import (CSV/XLSX/XML)
 - [ ] T09 Analytics page
 - [ ] T10 Courier & loss report
@@ -28,3 +28,4 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - T04: TESTED (`php -d extension=zip artisan test` -> Tests: 41 passed (359 assertions), incl. `AuditLogTest` chain validation, tamper/middle-delete detection, secret redaction, tenant isolation, analyst 403; MySQL `migrate --force` succeeded).
 - T05: TESTED (`php -d extension=zip artisan test` -> Tests: 46 passed (407 assertions), incl. `CacheAndMetricsTest`: 1800s TTL, 0-query cached hit, tenant-isolated version bump clear, ETag/304, auth/role guards, audited clear, non-auth job context, lock timeout fallback).
 - T06: TESTED (`php -d extension=zip artisan test` -> Tests: 50 passed (421 assertions), incl. `SchedulerAndWorkersTest`: `RefreshAllTenants` per-tenant dispatch, `ShouldBeUnique` deduplication, `WarmTenantCache`, `WorkerBeat`, `lyp:prune`; `php artisan schedule:list` verified).
+- T07: TESTED (`php -d extension=zip artisan test` -> Tests: 110 passed (541 assertions), incl. `StatusMapperAndParseTest` (58 status cases + Bangla/EN parser) and `OrdersSyncAndUiTest` (idempotency, stale guard, append-only history, cost fallback, customer hash/no-PII, tenant isolation, O(1) N+1 query check); MySQL `migrate --force` succeeded).

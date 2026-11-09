@@ -4,6 +4,8 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\WebsiteController;
@@ -51,6 +53,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/audit/verify', [AuditController::class, 'verify'])
         ->middleware('role:owner,admin')
         ->name('audit.verify');
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
     Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
     Route::get('/websites/create', [WebsiteController::class, 'create'])->name('websites.create');

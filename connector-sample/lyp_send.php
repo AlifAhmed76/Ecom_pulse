@@ -75,13 +75,13 @@ function lyp_signed_post(string $baseUrl, string $path, array $payload, string $
     ];
 }
 
-// 1. Send Heartbeat (expects HTTP 200)
+// 1. Heartbeat (200)
 $hb = lyp_signed_post($baseUrl, '/api/v1/connector/heartbeat', [
     'connector_version' => '1.0.0',
 ], $keyId, $secret);
 echo "Heartbeat HTTP {$hb['status']}: {$hb['body']}\n";
 
-// 2. Send Events batch (expects HTTP 202 {accepted: 1, duplicates: 0})
+// 2. Events (202 -> duplicates on retry)
 $eventId = 'evt_sample_'.date('Ymd_His');
 $eventsPayload = [
     'events' => [
@@ -93,10 +93,62 @@ $eventsPayload = [
         ],
     ],
 ];
-
 $ev1 = lyp_signed_post($baseUrl, '/api/v1/connector/events', $eventsPayload, $keyId, $secret);
-echo "Events (first send) HTTP {$ev1['status']}: {$ev1['body']}\n";
-
-// 3. Re-send same event ID with a NEW nonce (expects HTTP 202 {accepted: 0, duplicates: 1})
+echo "Events (1st) HTTP {$ev1['status']}: {$ev1['body']}\n";
 $ev2 = lyp_signed_post($baseUrl, '/api/v1/connector/events', $eventsPayload, $keyId, $secret);
-echo "Events (idempotent retry) HTTP {$ev2['status']}: {$ev2['body']}\n";
+echo "Events (retry) HTTP {$ev2['status']}: {$ev2['body']}\n";
+
+// 3. Products (requires products:write scope)
+$pr = lyp_signed_post($baseUrl, '/api/v1/connector/products', [
+    'products' => [
+        [
+            'id' => 'prod_sample_1',
+            'sku' => 'SMP-POLO-01',
+            'name' => 'Sample Cotton Polo',
+            'category' => 'Apparel',
+            'price' => 550,
+            'cost' => 300,
+            'stock' => 24,
+            'active' => true,
+        ],
+    ],
+], $keyId, $secret);
+echo "Products HTTP {$pr['status']}: {$pr['body']}\n";
+
+// 4. Orders (requires orders:write scope; idempotent re-send)
+$ordersPayload = [
+    'orders' => [
+        [
+            'id' => 'ord_sample_1001',
+            'status' => 'Delivered',
+            'ordered_at' => date(DATE_ATOM),
+            'updated_at' => date(DATE_ATOM),
+            'currency' => 'BDT',
+            'discount' => 0,
+            'shipping' => 60,
+            'total' => null,
+            'courier' => 'Pathao',
+            'consignment_id' => 'CN-SAMPLE-1001',
+            'city' => 'Dhaka',
+            'customer' => [
+                'id' => 'cust_sample_1',
+                'name' => 'Sample Buyer',
+                'phone' => '01700000001',
+            ],
+            'employee' => ['name' => 'Karim'],
+            'items' => [
+                [
+                    'product_id' => 'prod_sample_1',
+                    'sku' => 'SMP-POLO-01',
+                    'name' => 'Sample Cotton Polo',
+                    'quantity' => 2,
+                    'unit_price' => 550,
+                ],
+            ],
+        ],
+    ],
+];
+$or1 = lyp_signed_post($baseUrl, '/api/v1/connector/orders', $ordersPayload, $keyId, $secret);
+echo "Orders (1st) HTTP {$or1['status']}: {$or1['body']}\n";
+$or2 = lyp_signed_post($baseUrl, '/api/v1/connector/orders', $ordersPayload, $keyId, $secret);
+echo "Orders (retry) HTTP {$or2['status']}: {$or2['body']}\n";
