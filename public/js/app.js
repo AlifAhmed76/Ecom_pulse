@@ -21,4 +21,30 @@
             }
         });
     }
+
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        var msg = form && form.getAttribute ? form.getAttribute('data-confirm') : null;
+        if (msg && !window.confirm(msg)) {
+            event.preventDefault();
+        }
+    });
+
+    document.addEventListener('click', function (event) {
+        var btn = event.target && event.target.closest ? event.target.closest('[data-copy-target]') : null;
+        if (!btn) {
+            return;
+        }
+        var targetId = btn.getAttribute('data-copy-target');
+        var el = targetId ? document.getElementById(targetId) : null;
+        if (!el) {
+            return;
+        }
+        var text = el.textContent ? el.textContent.trim() : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                btn.textContent = 'Copied';
+            });
+        }
+    });
 })();

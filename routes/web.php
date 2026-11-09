@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +30,17 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/workspace', [WorkspaceController::class, 'show'])
         ->middleware('role:owner,admin')
         ->name('workspace.show');
+
+    Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
+    Route::get('/websites/create', [WebsiteController::class, 'create'])->name('websites.create');
+    Route::post('/websites', [WebsiteController::class, 'store'])->name('websites.store');
+    Route::get('/websites/{website}', [WebsiteController::class, 'show'])->name('websites.show');
+    Route::delete('/websites/{website}', [WebsiteController::class, 'destroy'])->name('websites.destroy');
+
+    Route::post('/websites/{website}/credentials', [CredentialController::class, 'store'])
+        ->name('websites.credentials.store');
+    Route::post('/websites/{website}/credentials/{credential}/rotate', [CredentialController::class, 'rotate'])
+        ->name('websites.credentials.rotate');
+    Route::post('/websites/{website}/credentials/{credential}/revoke', [CredentialController::class, 'revoke'])
+        ->name('websites.credentials.revoke');
 });

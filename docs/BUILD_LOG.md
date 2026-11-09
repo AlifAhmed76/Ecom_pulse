@@ -36,3 +36,20 @@
   - `php -d extension=zip artisan migrate --force; php -d extension=zip artisan db:seed --force` on MySQL `lastyear` -> succeeded.
 - **NOT RUN / UNVERIFIED:** Browser manual login check on XAMPP PC deferred to owner verification / T17 live smoke check.
 - **Status:** `T01 DONE - tests: 14 passed, 0 failed`
+
+## T02: Websites and connector credentials
+**Plan:**
+1. Create migrations for `websites` (`platform` laravel|file, nullable unique `domain`, `currency`, `status`, `verification_token`, `verified_at`, `last_heartbeat_at`, `connector_version`) and `api_credentials` (`key_id` unique, `secret_encrypted`, `scopes`, `expires_at`, `revoked_at`, `last_used_at`, `created_by`).
+2. Implement `App\Support\Domain::normalize` (strips scheme/www/port/path, lowercases, validates hostnames, allows `localhost`, rejects `user:pass@`) with full unit tests (`tests/Unit/DomainTest.php`).
+3. Create `Website` and `ApiCredential` models (`BelongsToTenant` on `Website`), `WebsitePolicy` (view: same-tenant all roles; create/manage: owner|admin; delete: owner only), and `App\Services\CredentialService` (`lyp_<20 hex>`, `lys_<64 hex>`, `Crypt::encryptString`, rotate with 1h grace, immediate revoke).
+4. Implement `WebsiteController` and `CredentialController` (one-time secret view with `Cache-Control: no-store`, never flashed to session; cross-website credential URL guard returning 404) + clean SaaS Blade views (`websites/index`, `create`, `show`, `secret`) and add Websites link to sidebar.
+5. Write comprehensive unit and feature tests (`DomainTest`, `WebsiteCredentialTest`), run `php artisan test`, `php -l`, and MySQL migrate, update `PROGRESS.md`, and commit.
+
+**Result (T02):**
+- **Files created/changed:** `database/migrations/2026_11_10_000003_create_websites_table.php`, `database/migrations/2026_11_10_000004_create_api_credentials_table.php`, `app/Support/Domain.php`, `app/Models/Website.php`, `app/Models/ApiCredential.php`, `app/Policies/WebsitePolicy.php`, `app/Services/CredentialService.php`, `app/Http/Controllers/WebsiteController.php`, `app/Http/Controllers/CredentialController.php`, `app/Providers/AppServiceProvider.php`, `routes/web.php`, `public/css/app.css`, `public/js/app.js`, `resources/views/layouts/app.blade.php`, `resources/views/dashboard.blade.php`, `resources/views/websites/{index,create,show,secret}.blade.php`, `tests/Unit/DomainTest.php`, `tests/Feature/WebsiteCredentialTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 31 passed (156 assertions), Duration: 2.70s`.
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000003_create_websites_table`, `2026_11_10_000004_create_api_credentials_table` DONE.
+- **NOT RUN / UNVERIFIED:** Manual browser reload check on XAMPP PC deferred to owner verification / T17 live smoke check (HTTP `Cache-Control: no-store` and absent secret on GET reload verified via feature tests).
+- **Status:** `T02 DONE - tests: 31 passed, 0 failed`

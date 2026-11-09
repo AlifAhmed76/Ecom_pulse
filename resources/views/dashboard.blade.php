@@ -21,12 +21,16 @@
     </p>
 </div>
 
-@if($user->canManage())
-    <div class="quick-links">
+<div class="quick-links">
+    <a href="{{ route('websites.index') }}" class="quick-link-card">
+        <span class="quick-link-title">Websites &amp; Credentials</span>
+        <span class="quick-link-desc">Register store domains and issue signed API keys for connectors.</span>
+    </a>
+    @if($user->canManage())
         <a href="{{ route('workspace.show') }}" class="quick-link-card">
             <span class="quick-link-title">Workspace &amp; Members</span>
             <span class="quick-link-desc">Inspect company workspace isolation and active user roles.</span>
         </a>
-    </div>
-@endif
+    @endif
+</div>
 @endsection

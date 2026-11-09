@@ -3,7 +3,7 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 
 - [x] T00 Environment & repository — TESTED (3 passed, 0 failed)
 - [x] T01 Auth, tenancy, roles — TESTED (14 passed, 0 failed)
-- [ ] T02 Websites & connector credentials
+- [x] T02 Websites & connector credentials — TESTED (31 passed, 0 failed)
 - [ ] T03 Signed Connector API (heartbeat, events)
 - [ ] T04 Audit hash-chain log
 - [ ] T05 Cache layer, MetricsService, System page, plain dashboard
@@ -23,3 +23,4 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 ## Status legend: DESIGNED / IMPLEMENTED / TESTED (command + result) / NOT RUN
 - T00: TESTED (`php -d extension=zip artisan test` -> Tests: 3 passed (5 assertions); `php -d extension=zip artisan migrate --force` on MySQL `lastyear` succeeded; `php artisan serve` HTTP check NOT RUN directly, deferred to T17/owner PC verification).
 - T01: TESTED (`php -d extension=zip artisan test` -> Tests: 14 passed (88 assertions); `migrate --force` + `db:seed --force` on MySQL succeeded).
+- T02: TESTED (`php -d extension=zip artisan test` -> Tests: 31 passed (156 assertions), incl. 13 `DomainTest` data cases & 4 `WebsiteCredentialTest` tests; MySQL `migrate --force` succeeded).
