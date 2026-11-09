@@ -53,3 +53,20 @@
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000003_create_websites_table`, `2026_11_10_000004_create_api_credentials_table` DONE.
 - **NOT RUN / UNVERIFIED:** Manual browser reload check on XAMPP PC deferred to owner verification / T17 live smoke check (HTTP `Cache-Control: no-store` and absent secret on GET reload verified via feature tests).
 - **Status:** `T02 DONE - tests: 31 passed, 0 failed`
+
+## T03: Signed Connector API (heartbeat, events)
+**Plan:**
+1. Create migrations & models for `request_nonces` and `integration_events` with unique constraints for atomic replay protection and per-website event idempotency.
+2. Enable `routes/api.php` (`/api/v1/connector`) and JSON error rendering on `api/*` in `bootstrap/app.php`, and configure `connector` rate limiter (`120/min` per key, `300/min` per IP) in `AppServiceProvider`.
+3. Implement `VerifyConnectorSignature` middleware enforcing the exact `API_CONTRACT.md` check order (headers, 1 MB cap, 300s timestamp skew, nonce regex, credential/website usability, constant-time HMAC-SHA256 signature, scope, atomic nonce insert).
+4. Implement `ConnectorController` (`POST /heartbeat` updating heartbeat timestamp & version, `POST /events` enforcing 100-event batch & 64 KB payload caps with `insertOrIgnore` idempotency) plus `lyp:prune` command to delete nonces older than 15 minutes.
+5. Create `connector-sample/lyp_send.php`, `docs/CONNECTOR_API.md`, write full `ConnectorApiTest` (plus Python/independent HMAC verification check), run `php artisan test`, `php -l`, MySQL migrate, update `PROGRESS.md`, and commit.
+
+**Result (T03):**
+- **Files created/changed:** `database/migrations/2026_11_10_000005_create_request_nonces_table.php`, `database/migrations/2026_11_10_000006_create_integration_events_table.php`, `app/Models/IntegrationEvent.php`, `app/Http/Middleware/VerifyConnectorSignature.php`, `app/Http/Controllers/Api/ConnectorController.php`, `app/Console/Commands/PruneCommand.php`, `routes/api.php`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php`, `connector-sample/lyp_send.php`, `docs/CONNECTOR_API.md`, `tests/Feature/ConnectorApiTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `bootstrap/`, `connector-sample/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 38 passed (336 assertions), Duration: 2.67s`.
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000005_create_request_nonces_table`, `2026_11_10_000006_create_integration_events_table` DONE.
+- **NOT RUN / UNVERIFIED:** Live `connector-sample/lyp_send.php` CLI execution against `php artisan serve` deferred to owner PC / T17 end-to-end live check (standalone HMAC canonical vector & all connector API endpoints verified via `ConnectorApiTest`).
+- **Status:** `T03 DONE - tests: 38 passed, 0 failed`
