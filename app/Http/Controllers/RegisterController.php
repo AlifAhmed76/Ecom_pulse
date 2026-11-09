@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +50,8 @@ class RegisterController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        AuditLog::record('auth.register', 'Registered tenant workspace', $user->tenant_id, $user->id);
 
         return redirect()->route('dashboard');
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
@@ -30,6 +31,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/workspace', [WorkspaceController::class, 'show'])
         ->middleware('role:owner,admin')
         ->name('workspace.show');
+
+    Route::get('/audit', [AuditController::class, 'index'])
+        ->middleware('role:owner,admin')
+        ->name('audit.index');
+    Route::post('/audit/verify', [AuditController::class, 'verify'])
+        ->middleware('role:owner,admin')
+        ->name('audit.verify');
 
     Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
     Route::get('/websites/create', [WebsiteController::class, 'create'])->name('websites.create');

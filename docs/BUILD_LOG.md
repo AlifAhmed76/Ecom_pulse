@@ -70,3 +70,20 @@
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000005_create_request_nonces_table`, `2026_11_10_000006_create_integration_events_table` DONE.
 - **NOT RUN / UNVERIFIED:** Live `connector-sample/lyp_send.php` CLI execution against `php artisan serve` deferred to owner PC / T17 end-to-end live check (standalone HMAC canonical vector & all connector API endpoints verified via `ConnectorApiTest`).
 - **Status:** `T03 DONE - tests: 38 passed, 0 failed`
+
+## T04: Audit hash-chain log
+**Plan:**
+1. Create migration for `audit_logs` (`tenant_id` nullable indexed, `user_id` nullable, `action`, `details(255)`, `prev_hash` nullable, `hash`, `created_at` dateTime).
+2. Implement `App\Models\AuditLog` with `record(action, details, ?tenantId, ?userId)` using `DB::transaction` + `lockForUpdate()` on the latest row and `sha256(prev|tenant|user|action|details|created_at)`.
+3. Implement `AuditLog::verifyChain(?int $tenantId)` streaming via `cursor()` that verifies `prev_hash` linkage and `hash` integrity across the chain while reporting only the current tenant's row count.
+4. Instrument auth (`register`, `login`, `login_failed`, `logout`), `WebsiteController` (`create`, `delete`), and `CredentialController` (`issue`, `rotate`, `revoke`) with short non-sensitive audit entries.
+5. Build `AuditController`, routes (`role:owner,admin` only), `audit/index.blade.php` + sidebar link, write `AuditLogTest`, run `php artisan test`, `php -l`, MySQL migrate, update `PROGRESS.md`, and commit.
+
+**Result (T04):**
+- **Files created/changed:** `database/migrations/2026_11_10_000007_create_audit_logs_table.php`, `app/Models/AuditLog.php`, `app/Http/Controllers/AuditController.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Controllers/RegisterController.php`, `app/Http/Controllers/WebsiteController.php`, `app/Http/Controllers/CredentialController.php`, `routes/web.php`, `resources/views/layouts/app.blade.php`, `resources/views/audit/index.blade.php`, `tests/Feature/AuditLogTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `bootstrap/`, `connector-sample/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 41 passed (359 assertions), Duration: 3.08s`.
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000007_create_audit_logs_table` DONE (switched `integration_events` and `audit_logs` to `dateTime` to prevent MariaDB 10.4 strict-mode timestamp errors).
+- **NOT RUN / UNVERIFIED:** Manual browser verification of MySQL direct-row edit followed by UI Verify click deferred to owner PC check.
+- **Status:** `T04 DONE - tests: 41 passed, 0 failed`

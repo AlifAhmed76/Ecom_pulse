@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Website;
 use App\Support\Domain;
 use Illuminate\Http\RedirectResponse;
@@ -83,6 +84,13 @@ class WebsiteController extends Controller
             'verification_token' => Str::random(40),
         ])->save();
 
+        AuditLog::record(
+            'website.create',
+            "Created website #{$website->id} ({$website->name})",
+            $website->tenant_id,
+            $request->user()->id
+        );
+
         return redirect()
             ->route('websites.show', $website)
             ->with('ok', 'Website registered. You can now issue connector credentials or import files.');
@@ -97,11 +105,22 @@ class WebsiteController extends Controller
         return view('websites.show', compact('website', 'credentials'));
     }
 
-    public function destroy(Website $website): RedirectResponse
+    public function destroy(Request $request, Website $website): RedirectResponse
     {
         Gate::authorize('delete', $website);
 
+        $id = $website->id;
+        $name = $website->name;
+        $tenantId = $website->tenant_id;
+
         $website->delete();
+
+        AuditLog::record(
+            'website.delete',
+            "Deleted website #{$id} ({$name})",
+            $tenantId,
+            $request->user()->id
+        );
 
         return redirect()
             ->route('websites.index')

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ApiCredential;
+use App\Models\AuditLog;
 use App\Models\Website;
 use App\Services\CredentialService;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,13 @@ class CredentialController extends Controller
             $request->user()->id
         );
 
+        AuditLog::record(
+            'credential.issue',
+            "Issued key {$issued['credential']->key_id} for website #{$website->id}",
+            $website->tenant_id,
+            $request->user()->id
+        );
+
         return $this->secretResponse($website, $issued['credential'], $issued['secret'], 'issued');
     }
 
@@ -52,10 +60,17 @@ class CredentialController extends Controller
 
         $issued = CredentialService::rotate($credential, $request->user()->id);
 
+        AuditLog::record(
+            'credential.rotate',
+            "Rotated {$credential->key_id} to {$issued['credential']->key_id} for website #{$website->id}",
+            $website->tenant_id,
+            $request->user()->id
+        );
+
         return $this->secretResponse($website, $issued['credential'], $issued['secret'], 'rotated');
     }
 
-    public function revoke(Website $website, ApiCredential $credential): RedirectResponse
+    public function revoke(Request $request, Website $website, ApiCredential $credential): RedirectResponse
     {
         Gate::authorize('manage', $website);
 
@@ -64,6 +79,13 @@ class CredentialController extends Controller
         }
 
         CredentialService::revoke($credential);
+
+        AuditLog::record(
+            'credential.revoke',
+            "Revoked key {$credential->key_id} for website #{$website->id}",
+            $website->tenant_id,
+            $request->user()->id
+        );
 
         return redirect()
             ->route('websites.show', $website)

@@ -5,7 +5,7 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - [x] T01 Auth, tenancy, roles — TESTED (14 passed, 0 failed)
 - [x] T02 Websites & connector credentials — TESTED (31 passed, 0 failed)
 - [x] T03 Signed Connector API (heartbeat, events) — TESTED (38 passed, 0 failed)
-- [ ] T04 Audit hash-chain log
+- [x] T04 Audit hash-chain log — TESTED (41 passed, 0 failed)
 - [ ] T05 Cache layer, MetricsService, System page, plain dashboard
 - [ ] T06 Scheduler & workers
 - [ ] T07 Orders domain + sync API
@@ -25,3 +25,4 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - T01: TESTED (`php -d extension=zip artisan test` -> Tests: 14 passed (88 assertions); `migrate --force` + `db:seed --force` on MySQL succeeded).
 - T02: TESTED (`php -d extension=zip artisan test` -> Tests: 31 passed (156 assertions), incl. 13 `DomainTest` data cases & 4 `WebsiteCredentialTest` tests; MySQL `migrate --force` succeeded).
 - T03: TESTED (`php -d extension=zip artisan test` -> Tests: 38 passed (336 assertions), incl. all 7 `ConnectorApiTest` suites covering HMAC, skew, replay, scopes, rate limit 429, idempotency, 1MB/64KB caps, `lyp:prune`; MySQL `migrate --force` succeeded).
+- T04: TESTED (`php -d extension=zip artisan test` -> Tests: 41 passed (359 assertions), incl. `AuditLogTest` chain validation, tamper/middle-delete detection, secret redaction, tenant isolation, analyst 403; MySQL `migrate --force` succeeded).
