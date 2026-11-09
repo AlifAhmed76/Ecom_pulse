@@ -47,4 +47,37 @@
             });
         }
     });
+
+    var dashboardRoot = document.getElementById('dashboard-root');
+    if (dashboardRoot) {
+        var metricsUrl = dashboardRoot.getAttribute('data-metrics-url');
+        if (metricsUrl && window.fetch) {
+            window.setInterval(function () {
+                window.fetch(metricsUrl, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                }).then(function (resp) {
+                    if (resp.status === 200) {
+                        return resp.json();
+                    }
+                    return null;
+                }).then(function (data) {
+                    if (!data) {
+                        return;
+                    }
+                    var nodes = dashboardRoot.querySelectorAll('[data-metric]');
+                    for (var i = 0; i < nodes.length; i++) {
+                        var key = nodes[i].getAttribute('data-metric');
+                        if (Object.prototype.hasOwnProperty.call(data, key)) {
+                            nodes[i].textContent = Number(data[key]).toLocaleString();
+                        }
+                    }
+                    var updatedEl = document.getElementById('dashboard-updated');
+                    if (updatedEl && data.updated_hhmm) {
+                        updatedEl.textContent = 'Updated ' + data.updated_hhmm;
+                    }
+                }).catch(function () {});
+            }, 60000);
+        }
+    }
 })();

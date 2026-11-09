@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SystemController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
@@ -28,9 +29,21 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/metrics/dashboard.json', [DashboardController::class, 'json'])->name('metrics.dashboard.json');
+    Route::post('/dashboard/refresh', [DashboardController::class, 'refresh'])
+        ->middleware(['role:owner,admin', 'throttle:10,1'])
+        ->name('dashboard.refresh');
+
     Route::get('/workspace', [WorkspaceController::class, 'show'])
         ->middleware('role:owner,admin')
         ->name('workspace.show');
+
+    Route::get('/system', [SystemController::class, 'index'])
+        ->middleware('role:owner,admin')
+        ->name('system.index');
+    Route::post('/system/cache-clear', [SystemController::class, 'clearCache'])
+        ->middleware(['role:owner,admin', 'throttle:10,1'])
+        ->name('system.cache-clear');
 
     Route::get('/audit', [AuditController::class, 'index'])
         ->middleware('role:owner,admin')

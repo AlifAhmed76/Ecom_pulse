@@ -87,3 +87,19 @@
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> `2026_11_10_000007_create_audit_logs_table` DONE (switched `integration_events` and `audit_logs` to `dateTime` to prevent MariaDB 10.4 strict-mode timestamp errors).
 - **NOT RUN / UNVERIFIED:** Manual browser verification of MySQL direct-row edit followed by UI Verify click deferred to owner PC check.
 - **Status:** `T04 DONE - tests: 41 passed, 0 failed`
+
+## T05: Cache layer, MetricsService, plain dashboard, System page
+**Plan:**
+1. Implement `App\Support\TenantCache` with per-tenant version keys (`t{id}:ver` -> `t{id}:v{ver}:{name}`), default 1800s TTL, stampede lock recovery on timeout, and isolated tenant `clear()` without ever calling `Cache::flush()`.
+2. Implement `App\Services\MetricsService` with explicit tenant-filtered queries (`websites`, `connected`, `active_credentials`, `events_24h`, and future `orders_30d`/`products`/`open_findings` hooks) plus `WarmTenantCache` job targeting queue `high`.
+3. Update `DashboardController` and plain `dashboard.blade.php` (max 6 KPI cards, `Updated HH:MM`, owner/admin throttled `Refresh data` button, audited cache clear) and add `GET /metrics/dashboard.json` with ETag, `Cache-Control: private, max-age=60, stale-while-revalidate=120`, and 304 responses.
+4. Build `SystemController` and `system/index.blade.php` (`role:owner,admin`) showing cache store, TTL, last computed time, scheduler/worker booleans, LLM placeholder, and clear-cache button; add 60s background polling in `public/js/app.js` and ensure `?v=filemtime` on all asset URLs.
+5. Write `CacheAndMetricsTest` covering TTL, zero-query cached read, tenant isolation, lock timeout fallback, ETag/304, auth/role guards, auditing, and job-context tenant filtering; run `php artisan test`, `php -l`, update `PROGRESS.md`, and commit.
+
+**Result (T05):**
+- **Files created/changed:** `app/Support/TenantCache.php`, `app/Services/MetricsService.php`, `app/Jobs/WarmTenantCache.php`, `app/Http/Controllers/DashboardController.php`, `app/Http/Controllers/SystemController.php`, `routes/web.php`, `public/js/app.js`, `resources/views/layouts/app.blade.php`, `resources/views/dashboard.blade.php`, `resources/views/system/index.blade.php`, `tests/Feature/CacheAndMetricsTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `bootstrap/`, `connector-sample/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 46 passed (407 assertions), Duration: 4.21s`.
+- **NOT RUN / UNVERIFIED:** Manual browser verification of 60s dashboard JS polling deferred to owner PC check.
+- **Status:** `T05 DONE - tests: 46 passed, 0 failed`
