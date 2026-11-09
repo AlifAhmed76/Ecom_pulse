@@ -103,3 +103,20 @@
   - `php -d extension=zip artisan test` -> `Tests: 46 passed (407 assertions), Duration: 4.21s`.
 - **NOT RUN / UNVERIFIED:** Manual browser verification of 60s dashboard JS polling deferred to owner PC check.
 - **Status:** `T05 DONE - tests: 46 passed, 0 failed`
+
+## T06: Scheduler and workers
+**Plan:**
+1. Update `WarmTenantCache` to implement `ShouldBeUnique` (`uniqueId`, `uniqueFor = 120`, `tries = 2`, `backoff = [15, 60]`) so duplicate warm requests coalesce per tenant.
+2. Create `App\Jobs\WorkerBeat` (`sys:worker_beat`, 180s TTL) and `App\Jobs\RefreshAllTenants` (dispatches unique `WarmTenantCache` per tenant on queue `default`).
+3. Configure `routes/console.php` schedules: `scheduler-beat` (every minute), `WorkerBeat` on `high` (every minute), `RefreshAllTenants` (every 15 minutes with `withoutOverlapping`), and `lyp:prune` (every 5 minutes).
+4. Update `SystemController` / `system/index.blade.php` to display `"Running"` / `"Not running"` status badges strictly from beat cache keys, and create `scheduler.bat`, `worker.bat`, `worker-ai.bat`, and `run.bat`.
+5. Write `SchedulerAndWorkersTest` verifying per-tenant dispatch, cache warming, pruning, and unique-job deduplication; run `php artisan test`, `php -l`, update `PROGRESS.md`, and commit.
+
+**Result (T06):**
+- **Files created/changed:** `app/Jobs/WarmTenantCache.php`, `app/Jobs/WorkerBeat.php`, `app/Jobs/RefreshAllTenants.php`, `routes/console.php`, `resources/views/system/index.blade.php`, `scheduler.bat`, `worker.bat`, `worker-ai.bat`, `run.bat`, `tests/Feature/SchedulerAndWorkersTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `bootstrap/`, `connector-sample/`, `database/`, `routes/`, `tests/` -> 0 syntax errors.
+  - `php -d extension=zip artisan test` -> `Tests: 50 passed (421 assertions), Duration: 4.21s`.
+  - `php -d extension=zip artisan schedule:list` -> 4 schedules listed cleanly (`scheduler-beat`, `worker-beat`, `refresh-all-tenants`, `lyp:prune`).
+- **NOT RUN / UNVERIFIED:** Interactive `run.bat` window launch over 2 minutes on XAMPP PC deferred to owner PC verification / T17.
+- **Status:** `T06 DONE - tests: 50 passed, 0 failed`

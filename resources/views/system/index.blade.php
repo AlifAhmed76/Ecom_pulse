@@ -26,9 +26,9 @@
         <div class="kpi-label">Scheduler Status</div>
         <div class="kpi-value">
             @if($schedulerAlive)
-                <span class="badge badge--ok">Alive</span>
+                <span class="badge badge--ok">Running</span>
             @else
-                <span class="badge badge--warn">Idle / Not started</span>
+                <span class="badge badge--warn">Not running</span>
             @endif
         </div>
         <div class="kpi-meta">Heartbeat checked per minute</div>
@@ -37,9 +37,9 @@
         <div class="kpi-label">Queue Worker</div>
         <div class="kpi-value">
             @if($workerAlive)
-                <span class="badge badge--ok">Alive</span>
+                <span class="badge badge--ok">Running</span>
             @else
-                <span class="badge badge--warn">Idle / Sync fallback</span>
+                <span class="badge badge--warn">Not running</span>
             @endif
         </div>
         <div class="kpi-meta">Database queue worker status</div>
