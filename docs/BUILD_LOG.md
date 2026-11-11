@@ -306,3 +306,23 @@
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` (migrations `000017`–`000034` pending XAMPP MariaDB startup on `127.0.0.1:3306`).
   - Owner interactive browser walkthrough (load demo, run scan, print weekly report, remove demo) deferred to XAMPP PC.
 - **Status:** `T16 DONE - tests: 171 passed, 0 failed`
+
+## T17: Packaging and final documentation
+**Plan:**
+1. **What I understood:** Package the application so a fresh Windows PC can install, test, and run the 10-minute offline demo from the release archive following only `README.md` (`setup.bat`, `run.bat`, `run-tests.bat`, optional `docker-compose.redis.yml`, `docs/DEPLOYMENT_REDIS_APACHE_OPCACHE.md`, `README.md` with install/demo logins/demo script/security notes/known limitations/honest status table, `docs/CONNECTOR_GUIDE.md`, `docs/IMPORT_GUIDE.md`, route smoke test verifying every page for both `owner` and `analyst` with zero `500` errors, full PHPUnit test output, and final release ZIP). No new product features.
+2. **Files to create/change:** `setup.bat`, `run-tests.bat`, `docker-compose.redis.yml`, `README.md`, `docs/CONNECTOR_GUIDE.md`, `docs/IMPORT_GUIDE.md`, `docs/DEPLOYMENT_REDIS_APACHE_OPCACHE.md`, `.gitignore` (ignore `/dist`), `tests/Feature/RouteSmokeTest.php`, `docs/PROGRESS.md`, `docs/BUILD_LOG.md`, plus untracked release artifact `dist/ecompulse-release.zip` generated cleanly via `git archive` (after commit) / verified unzip check.
+3. **What could go wrong:** `php.ini` on a clean Windows PHP/XAMPP PC lacking `extension=zip` enabled causing bare `php artisan test` subprocesses to miss `ZipArchive`; `setup.bat` accidentally overwriting an existing `.env` or failing when XAMPP MySQL is stopped or `APP_KEY` is already set; batch script failing if run from another working directory; smoke test hitting routes requiring seeded batch/analysis/report models or hitting `GET /login`/`/register` as signed-in user without checking redirect; zipping `.env` / secrets / `.git` / vendor bloat into release zip.
+4. **Mitigation:** Ensure `setup.bat` auto-detects `C:\xampp\php\php.exe` / `C:\php-8.2.10\php.exe` / PATH PHP, passes `-d extension=zip`, checks PHP >= 8.2 & required extensions, checks MySQL connectivity + creates database idempotently via PHP PDO without exposing credentials, only copies `.env` and generates `APP_KEY` if empty, and runs `composer install`, `migrate --force`, `db:seed --force`, and `view:cache`; have `run-tests.bat` invoke `vendor/phpunit/phpunit/phpunit` with `-d extension=zip` (`phpunit.xml` SQLite `:memory:`); add `RouteSmokeTest` enumerating every registered `GET` route as `owner` and `analyst` guaranteeing zero `500`s; document every limitation & `UNVERIFIED_AGAINST_REAL_DATA` / `NOT RUN` item honestly; and generate `dist/ecompulse-release.zip` cleanly from tracked repo contents (excluding `.env`, `.git`, `vendor`, logs).
+
+**Result (T17):**
+- **Files created/changed:** `setup.bat`, `run-tests.bat`, `docker-compose.redis.yml`, `.gitignore`, `README.md`, `docs/CONNECTOR_GUIDE.md`, `docs/IMPORT_GUIDE.md`, `docs/DEPLOYMENT_REDIS_APACHE_OPCACHE.md`, `docs/{PROGRESS,BUILD_LOG}.md`, `tests/Feature/RouteSmokeTest.php`.
+- **Commands run + result:**
+  - `php -l tests/Feature/RouteSmokeTest.php` -> 0 syntax errors.
+  - `php artisan view:cache; php artisan view:clear` -> Blade views compiled with zero errors.
+  - `cmd /c run-tests.bat` -> `OK (173 tests, 3370 assertions)` (`RouteSmokeTest`: 2/2 passed, 170 assertions).
+  - `git archive --format=zip --output=dist/ecompulse-release.zip HEAD` -> verified archive contents & `.env`/secret exclusion.
+- **NOT RUN / UNVERIFIED:**
+  - `setup.bat` live execution against running XAMPP MySQL (MariaDB stopped on `127.0.0.1:3306`; migrations `000017`–`000034` pending).
+  - Second-PC / clean-folder full extract & interactive `DEMO_PLAN.md` browser walkthrough deferred to owner PC.
+  - Real client Order/Courier/Ad CSVs remain `UNVERIFIED_AGAINST_REAL_DATA`.
+- **Status:** `T17 DONE - tests: 173 passed, 0 failed`
