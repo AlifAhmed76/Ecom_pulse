@@ -90,6 +90,10 @@
             <span class="quick-link-title">Chatbots &amp; Knowledge Base</span>
             <span class="quick-link-desc">Configure grounded store chat widgets, KB FAQs, leads, and handoff.</span>
         </a>
+        <a href="{{ route('weekly-reports.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Weekly Summary Reports</span>
+            <span class="quick-link-desc">Preview and print Saturday 08:00 Bangla &amp; English executive summaries.</span>
+        </a>
         @if($user->canManage())
             <a href="{{ route('security.index') }}" class="quick-link-card">
                 <span class="quick-link-title">Security Events &amp; Rules</span>

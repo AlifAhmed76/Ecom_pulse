@@ -31,6 +31,12 @@
     });
 
     document.addEventListener('click', function (event) {
+        var printBtn = event.target && event.target.closest ? event.target.closest('[data-print-button]') : null;
+        if (printBtn) {
+            window.print();
+            return;
+        }
+
         var btn = event.target && event.target.closest ? event.target.closest('[data-copy-target]') : null;
         if (!btn) {
             return;

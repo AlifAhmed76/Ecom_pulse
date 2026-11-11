@@ -1,9 +1,11 @@
 <?php
 
+use App\Jobs\BuildWeeklyReports;
 use App\Jobs\RefreshAllTenants;
 use App\Jobs\ScanAllTenantsRisk;
 use App\Jobs\ScanAllTenantsRnd;
 use App\Jobs\WorkerBeat;
+use Illuminate\Console\Scheduling\Schedule as ConsoleSchedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -34,6 +36,12 @@ Schedule::job(new ScanAllTenantsRisk(), 'default')
 Schedule::job(new ScanAllTenantsRnd(), 'default')
     ->name('rnd-scan-all-tenants')
     ->dailyAt('02:30')
+    ->timezone(config('app.timezone', 'Asia/Dhaka'))
+    ->withoutOverlapping();
+
+Schedule::job(new BuildWeeklyReports(), 'default')
+    ->name('build-weekly-reports')
+    ->weeklyOn(ConsoleSchedule::SATURDAY, '08:00')
     ->timezone(config('app.timezone', 'Asia/Dhaka'))
     ->withoutOverlapping();
 

@@ -287,3 +287,22 @@
   - `UNVERIFIED_AGAINST_REAL_DATA`: no real Meta/Google ad CSV supplied by owner yet; `AdMapper::emptyMapping()` defaults all null and requires manual header selection.
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` (migrations `000017`–`000032` pending XAMPP MariaDB startup on `127.0.0.1:3306`).
 - **Status:** `T15 DONE - tests: 165 passed, 0 failed`
+
+## T16: Weekly report, demo mode, export and delete
+**Plan:**
+1. **What I understood:** Add three presentation- & compliance-ready capabilities: (a) idempotent `weekly_reports` built weekly at Saturday 08:00 `Asia/Dhaka` (`BuildWeeklyReports` / `BuildTenantWeeklyReport`) and viewable/printable (no email/SMS) in both English and Bangla without unresolved placeholders, covering top R&D findings, money lost, courier highlights, and experiment updates; (b) owner-only deterministic `DemoSeeder` (`source=demo`) seeding 1 website, 40 products with costs, 2,500 orders over 120 days, 3 couriers (one deliberately worse), 4 employees (one higher cancel rate), courier shipments, ad rows, and history rows, plus one-click removal leaving non-demo data intact; and (c) owner-only queued tenant data export (`tenant_exports` ZIP of CSV-injection-safe CSVs excluding secrets and other tenants) and queued tenant data deletion (typed slug confirmation + audited).
+2. **Files to create/change:** migrations `000033` (`weekly_reports`) & `000034` (`tenant_exports` + `source` columns for demo tagging), models (`WeeklyReport`, `TenantExport`), `App\Support\Csv`, `App\Services\WeeklyReportService`, `App\Services\Demo\{DeterministicRng,DemoSeeder}`, jobs (`BuildWeeklyReports`, `BuildTenantWeeklyReport`, `ExportTenantData`, `DeleteTenantData`), `WeeklyReportController`, `WorkspaceController`, `routes/{web,console}.php`, views (`weekly-reports/{index,show}.blade.php`, `workspace.blade.php`, nav/dashboard links), `public/css/app.css` + `public/js/app.js` print support, and `tests/Feature/WeeklyReportDemoExportDeleteTest.php`.
+3. **What could go wrong:** Bulk seeding 2,500 orders + children hitting SQLite's 999 bind-parameter limit; deleting demo or tenant data failing FK constraints or leaving orphan rows in SQLite; deleting `audit_logs` breaking the SHA-256 hash chain; `ZipArchive` unavailable if `ext-zip` isn't loaded in some PHP runtimes; CSV formula injection (`=`, `+`, `-`, `@`); or unresolved `{placeholder}` strings in EN/BN weekly reports.
+4. **Mitigation:** Chunk all bulk inserts to <= 40 rows; delete child rows in explicit reverse FK order inside transactions without breaking `audit_logs`; sanitize every exported CSV cell via `Csv::safeCell()`; use native `ZipArchive` with `zlib` PKZIP fallback; schedule `weeklyOn(Schedule::SATURDAY, '08:00')`; enforce `role:owner` + exact slug match; and assert zero `{...}` placeholders + complete isolation/cleanup in PHPUnit tests.
+
+**Result (T16):**
+- **Files created/changed:** `database/migrations/2026_11_10_000033_create_weekly_reports_table.php`, `database/migrations/2026_11_10_000034_add_demo_source_and_tenant_exports_table.php`, `app/Models/{WeeklyReport,TenantExport}.php`, `app/Support/Csv.php`, `app/Services/Demo/{DeterministicRng,DemoSeeder}.php`, `app/Services/WeeklyReportService.php`, `app/Jobs/{BuildTenantWeeklyReport,BuildWeeklyReports,ExportTenantData,DeleteTenantData}.php`, `app/Http/Controllers/{WeeklyReportController,WorkspaceController}.php`, `routes/{web,console}.php`, `resources/views/weekly-reports/{index,show}.blade.php`, `resources/views/{workspace,dashboard,layouts/app}.blade.php`, `public/css/app.css`, `public/js/app.js`, `docs/{PROGRESS,BUILD_LOG}.md`, `tests/Feature/WeeklyReportDemoExportDeleteTest.php`.
+- **Commands run + result:**
+  - `php -l` across new/edited PHP files -> 0 syntax errors.
+  - `php artisan view:cache; php artisan view:clear` -> Blade views compiled with zero errors.
+  - `php artisan schedule:list` -> shows `0 8 * * 6 build-weekly-reports` (`Saturday 08:00`).
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (171 tests, 3200 assertions)` (`WeeklyReportDemoExportDeleteTest`: 6/6 passed, 143+ assertions).
+- **NOT RUN / UNVERIFIED:**
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` (migrations `000017`–`000034` pending XAMPP MariaDB startup on `127.0.0.1:3306`).
+  - Owner interactive browser walkthrough (load demo, run scan, print weekly report, remove demo) deferred to XAMPP PC.
+- **Status:** `T16 DONE - tests: 171 passed, 0 failed`

@@ -21,6 +21,7 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\WeeklyReportController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -86,9 +87,23 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/experiments/{experiment}', [ExperimentController::class, 'show'])->name('experiments.show');
     Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots.index');
     Route::get('/chatbots/{chatbot}', [ChatbotController::class, 'show'])->name('chatbots.show');
+    Route::get('/weekly-reports', [WeeklyReportController::class, 'index'])->name('weekly-reports.index');
+    Route::get('/weekly-reports/{weeklyReport}', [WeeklyReportController::class, 'show'])->name('weekly-reports.show');
     Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
+    Route::middleware('role:owner')->group(function (): void {
+        Route::post('/workspace/demo/load', [WorkspaceController::class, 'loadDemo'])->name('workspace.demo.load');
+        Route::post('/workspace/demo/remove', [WorkspaceController::class, 'removeDemo'])->name('workspace.demo.remove');
+        Route::post('/workspace/export', [WorkspaceController::class, 'exportTenant'])
+            ->middleware('throttle:5,1')
+            ->name('workspace.export');
+        Route::get('/workspace/exports/{tenantExport}/download', [WorkspaceController::class, 'downloadExport'])
+            ->name('workspace.exports.download');
+        Route::post('/workspace/delete', [WorkspaceController::class, 'destroyTenant'])->name('workspace.delete');
+    });
+
     Route::middleware('role:owner,admin')->group(function (): void {
+        Route::post('/weekly-reports/build', [WeeklyReportController::class, 'build'])->name('weekly-reports.build');
         Route::post('/chatbots', [ChatbotController::class, 'store'])->name('chatbots.store');
         Route::post('/chatbots/{chatbot}', [ChatbotController::class, 'update'])->name('chatbots.update');
         Route::post('/chatbots/{chatbot}/token', [ChatbotController::class, 'issueToken'])->name('chatbots.token');
