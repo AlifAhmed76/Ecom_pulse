@@ -5,6 +5,7 @@ namespace App\Services\Rnd;
 use App\Models\ResearchFinding;
 use App\Models\Website;
 use App\Services\AnalyticsService;
+use App\Services\Marketing\MarketingAnalyticsService;
 use App\Support\Stats;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -1094,6 +1095,109 @@ class RuleEngine
                         'analytics_params' => ['preset' => 'custom', 'from' => $from30, 'to' => $todayStr, 'website_id' => $siteId],
                     ],
                 ];
+            }
+
+            // ---------------------------------------------------------
+            // R13: Platform-vs-real ROAS gap (T15; coverage-gated)
+            // ---------------------------------------------------------
+            $mkt = MarketingAnalyticsService::for($tenantId)->report([
+                'preset' => 'custom',
+                'from' => $from30,
+                'to' => $todayStr,
+                'website_id' => $siteId,
+            ]);
+
+            if (! empty($mkt['has_ad_data']) && ! ($mkt['mixed_currency'] ?? false)) {
+                $adSpend = (float) ($mkt['platform_reported']['spend'] ?? 0.0);
+                $platRoas = $mkt['platform_reported']['roas'] ?? null;
+                $platRev = $mkt['platform_reported']['revenue'] ?? null;
+                $realRoas = $mkt['real_orders']['roas'] ?? null;
+                $realRev = (float) ($mkt['real_orders']['delivered_revenue'] ?? 0.0);
+                $utmCovPct = (float) ($mkt['attribution']['utm_coverage_pct'] ?? 0.0);
+                $orders30Cnt = (int) ($mkt['attribution']['orders_total'] ?? 0);
+
+                $minCovPct = (float) ($cfg['r13_min_coverage_pct'] ?? 50.0);
+                $minSpend = (float) ($cfg['r13_min_spend'] ?? 1000.0);
+                $minRatio = (float) ($cfg['r13_min_gap_ratio'] ?? 1.5);
+                $minDiff = (float) ($cfg['r13_min_gap_diff'] ?? 0.5);
+
+                if ($adSpend >= $minSpend && $platRoas !== null) {
+                    if ($utmCovPct < $minCovPct) {
+                        $candidates[] = $this->insufficientCandidate(
+                            'R13',
+                            'R13.low_coverage',
+                            $siteId,
+                            $siteName,
+                            $currency,
+                            $orders30Cnt,
+                            ['from' => $from30, 'to' => $todayStr],
+                            ['ad_performance_daily', 'orders'],
+                            [
+                                'spend' => number_format($adSpend, 2),
+                                'plat_roas' => number_format((float) $platRoas, 2),
+                                'coverage_pct' => number_format($utmCovPct, 1),
+                                'min_coverage_pct' => number_format($minCovPct, 1),
+                            ],
+                            $dqScore
+                        );
+                    } elseif (
+                        $realRoas !== null
+                        && (float) $platRoas >= ((float) $realRoas * $minRatio)
+                        && ((float) $platRoas - (float) $realRoas) >= $minDiff
+                    ) {
+                        $gapMoney = round(max(0.0, ((float) ($platRev ?? 0.0)) - $realRev), 2);
+                        $untaggedPct = round(max(0.0, 100.0 - $utmCovPct), 1);
+                        $targetRoas = round(max((float) $realRoas + 0.5, ((float) $platRoas + (float) $realRoas) / 2), 2);
+                        $conf = $this->confidenceFor($orders30Cnt, null, null, $dqScore);
+
+                        $candidates[] = [
+                            'rule_code' => 'R13',
+                            'subject_key' => 'roas_gap',
+                            'is_insufficient_data' => false,
+                            'template_key' => 'R13.trigger',
+                            'severity' => $this->severityFor($gapMoney, $gross30Ref),
+                            'money_at_stake' => $gapMoney,
+                            'currency' => $currency,
+                            'confidence' => $conf['level'],
+                            'params' => [
+                                'website' => $siteName,
+                                'currency' => $currency,
+                                'days' => 30,
+                                'spend' => number_format($adSpend, 2),
+                                'plat_roas' => number_format((float) $platRoas, 2),
+                                'real_roas' => number_format((float) $realRoas, 2),
+                                'plat_rev' => number_format((float) ($platRev ?? 0.0), 2),
+                                'real_rev' => number_format($realRev, 2),
+                                'coverage_pct' => number_format($utmCovPct, 1),
+                                'untagged_pct' => number_format($untaggedPct, 1),
+                                'target_roas' => number_format($targetRoas, 2),
+                                'n' => $orders30Cnt,
+                                'dq_score' => $dqScore,
+                                'p_value' => null,
+                                'confidence_reason_key' => $conf['reason_key'],
+                            ],
+                            'evidence' => [
+                                'metrics' => [
+                                    ['label' => 'Platform ROAS (reported)', 'value' => number_format((float) $platRoas, 2).'x'],
+                                    ['label' => 'Real ROAS (delivered)', 'value' => number_format((float) $realRoas, 2).'x'],
+                                    ['label' => 'UTM coverage', 'value' => number_format($utmCovPct, 1).'%'],
+                                    ['label' => 'Ad spend (30d)', 'value' => "{$currency} ".number_format($adSpend, 2)],
+                                ],
+                                'source_tables' => ['ad_performance_daily', 'orders'],
+                                'window_from' => $from30,
+                                'window_to' => $todayStr,
+                                'window_days' => 30,
+                                'comparison_baseline' => 'Delivered real ROAS vs platform-reported ROAS',
+                                'sample_size' => $orders30Cnt,
+                                'p_value' => null,
+                                'z_score' => null,
+                                'wilson_ci' => null,
+                                'data_quality_score' => $dqScore,
+                                'analytics_params' => ['preset' => 'custom', 'from' => $from30, 'to' => $todayStr, 'website_id' => $siteId],
+                            ],
+                        ];
+                    }
+                }
             }
 
             // Persist / deduplicate all candidates cleanly

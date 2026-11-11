@@ -81,6 +81,15 @@ class RndTemplatesTest extends TestCase
             'bad_summary' => 'Missing courier (45%)',
             'disabled_rules' => 'R04',
             'bad_indicators_list' => 'Missing courier: 45%',
+            'spend' => '25,000.00',
+            'plat_roas' => '6.50',
+            'real_roas' => '2.40',
+            'plat_rev' => '162,500.00',
+            'real_rev' => '60,000.00',
+            'coverage_pct' => '75.0',
+            'untagged_pct' => '25.0',
+            'min_coverage_pct' => '50.0',
+            'target_roas' => '4.45',
             'confidence_reason_key' => 'high_stat',
         ];
 

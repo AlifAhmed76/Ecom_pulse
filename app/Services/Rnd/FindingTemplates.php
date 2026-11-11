@@ -28,6 +28,7 @@ final class FindingTemplates
             'R10.trigger', 'R10.insufficient',
             'R11.trigger', 'R11.insufficient',
             'R12.trigger',
+            'R13.trigger', 'R13.low_coverage',
         ];
     }
 
@@ -867,6 +868,45 @@ final class FindingTemplates
                     'duration' => '7 days',
                 ],
             ],
+            'R13.trigger' => [
+                'title' => 'Platform ROAS exceeds delivered real ROAS ({plat_roas}x vs {real_roas}x at {coverage_pct}% coverage)',
+                'summary' => 'Across {days} days on {website} with {coverage_pct}% UTM order coverage, ad platforms reported {plat_roas}x ROAS ({currency} {plat_rev} on {currency} {spend} spend), whereas matched delivered orders show {real_roas}x real ROAS ({currency} {real_rev}; pre-COGS/shipping/returns).',
+                'hypotheses' => [
+                    'Ad platforms count view-through or click-window conversions for orders that later cancelled or returned on COD.',
+                    'Offline WhatsApp/phone orders or stripped URL parameters prevented some UTM campaign tags from reaching orders.',
+                    'Campaign naming differences between Ad Manager and store checkout utm_campaign links reduced attribution matches.',
+                ],
+                'missing_data' => [
+                    'Remaining {untagged_pct}% of store orders missing utm_campaign parameters.',
+                    'Verified product COGS and courier return fees (Real ROAS is delivered revenue only, never net profit).',
+                ],
+                'action' => 'Audit campaigns with the widest gap on the Marketing page and standardize utm_campaign tags across every live ad link.',
+                'experiment' => 'Pause or cap spend on campaigns with high reported ROAS but near-zero delivered orders for 14 days while tracking delivered real ROAS.',
+                'success' => [
+                    'metric' => 'Matched delivered Real ROAS (x)',
+                    'baseline' => '{real_roas}x',
+                    'target' => '>= {target_roas}x',
+                    'duration' => '14 days',
+                ],
+            ],
+            'R13.low_coverage' => [
+                'title' => 'Marketing UTM matching coverage too low for fair R13 comparison ({coverage_pct}%)',
+                'summary' => 'Ad spend of {currency} {spend} (platform ROAS {plat_roas}x) was imported for {website}, but only {coverage_pct}% of orders carry a utm_campaign tag (minimum {min_coverage_pct}% required). Real ROAS gap alert is suppressed to avoid false blame.',
+                'hypotheses' => [
+                    'Checkout or landing links omit utm_campaign parameters or drop URL query strings before order submission.',
+                ],
+                'missing_data' => [
+                    'Consistent utm_campaign parameter capture on >= {min_coverage_pct}% of storefront orders.',
+                ],
+                'action' => 'Add explicit utm_campaign parameters matching your ad campaign names cleanly to landing URLs and re-sync.',
+                'experiment' => 'Ensure utm_campaign capture on storefront checkouts for 14 days before evaluating real ROAS.',
+                'success' => [
+                    'metric' => 'UTM order matching coverage (%)',
+                    'baseline' => '{coverage_pct}%',
+                    'target' => '>= {min_coverage_pct}%',
+                    'duration' => '14 days',
+                ],
+            ],
         ];
     }
 
@@ -1392,6 +1432,45 @@ final class FindingTemplates
                     'baseline' => '{dq_score}/১০০',
                     'target' => '>= ৮৫/১০০',
                     'duration' => '৭ দিন',
+                ],
+            ],
+            'R13.trigger' => [
+                'title' => 'অ্যাড প্ল্যাটফর্ম ROAS বাস্তব ডেলিভার্ড ROAS-এর চেয়ে অনেক বেশি ({plat_roas}x বনাম {real_roas}x; কভারেজ {coverage_pct}%)',
+                'summary' => '{website}-এ গত {days} দিনে {coverage_pct}% অর্ডারে UTM কভারেজ থাকা অবস্থায় প্ল্যাটফর্ম রিপোর্টে {currency} {spend} খরচে {plat_roas}x ROAS ({currency} {plat_rev}) দেখালেও, ম্যাচকৃত ডেলিভার্ড অর্ডার অনুযায়ী বাস্তব ROAS {real_roas}x ({currency} {real_rev}; পণ্য খরচ ও রিটার্ন ফি বাদ দেওয়ার আগে)।',
+                'hypotheses' => [
+                    'অ্যাড প্ল্যাটফর্ম এমন ভিউ-থ্রু বা বাতিল/রিটার্ন হওয়া সিওডি অর্ডারও কনভার্সন হিসেবে গণনা করে থাকতে পারে।',
+                    'ইনবক্স/হোয়াটসঅ্যাপ বা ফোন অর্ডারে utm_campaign ট্যাগ না থাকায় কিছু বাস্তব অর্ডার ম্যাচ হয়নি।',
+                    'অ্যাড ম্যানেজারের ক্যাম্পেইন নাম ও স্টোরের utm_campaign নামের বানানে অমিল থেকে থাকতে পারে।',
+                ],
+                'missing_data' => [
+                    'বাকি {untagged_pct}% অর্ডারে utm_campaign তথ্য।',
+                    'পণ্যের ক্রয়মূল্য ও কুরিয়ার রিটার্ন খরচ (বাস্তব ROAS কেবল ডেলিভার্ড বিক্রির অনুপাত, নিট মুনাফা নয়)।',
+                ],
+                'action' => 'মার্কেটিং পেজে কোন ক্যাম্পেইনে প্ল্যাটফর্ম বনাম বাস্তব ROAS পার্থক্য সবচেয়ে বেশি তা যাচাই করুন এবং সব অ্যাডে সঠিক utm_campaign দিন।',
+                'experiment' => 'যে ক্যাম্পেইনে রিপোর্টেড ROAS বেশি কিন্তু ডেলিভার্ড অর্ডার কম, সেটিতে ১৪ দিন বাজেট সীমিত রেখে ডেলিভার্ড ROAS পরীক্ষা করুন।',
+                'success' => [
+                    'metric' => 'ম্যাচকৃত ডেলিভার্ড বাস্তব ROAS (x)',
+                    'baseline' => '{real_roas}x',
+                    'target' => '>= {target_roas}x',
+                    'duration' => '১৪ দিন',
+                ],
+            ],
+            'R13.low_coverage' => [
+                'title' => 'বাস্তব ROAS তুলনার জন্য UTM ম্যাচিং কভারেজ যথেষ্ট নয় ({coverage_pct}%)',
+                'summary' => '{website}-এর জন্য {currency} {spend} বিজ্ঞাপন খরচ (প্ল্যাটফর্ম ROAS {plat_roas}x) ইমপোর্ট হলেও মাত্র {coverage_pct}% অর্ডারে utm_campaign ট্যাগ পাওয়া গেছে (ন্যূনতম {min_coverage_pct}% প্রয়োজন)। ভুল দোষারোপ এড়াতে R13 সতর্কতা দেখানো হয়নি।',
+                'hypotheses' => [
+                    'স্টোরের অ্যাড লিংক বা চেকআউটে utm_campaign ট্যাগ সংরক্ষিত হচ্ছে না।',
+                ],
+                'missing_data' => [
+                    'অন্তত {min_coverage_pct}% স্টোর অর্ডারে সঠিক utm_campaign ট্যাগ।',
+                ],
+                'action' => 'সব সক্রিয় অ্যাডের ল্যান্ডিং লিংকে ক্যাম্পেইনের নামের সাথে মিল রেখে utm_campaign যোগ করুন।',
+                'experiment' => '১৪ দিন অর্ডারে utm_campaign কভারেজ >= {min_coverage_pct}% এ তুলে পুনরায় R&D স্ক্যান চালান।',
+                'success' => [
+                    'metric' => 'UTM অর্ডার ম্যাচিং কভারেজ (%)',
+                    'baseline' => '{coverage_pct}%',
+                    'target' => '>= {min_coverage_pct}%',
+                    'duration' => '১৪ দিন',
                 ],
             ],
         ];

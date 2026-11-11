@@ -70,6 +70,10 @@
             <span class="quick-link-title">Courier &amp; Loss</span>
             <span class="quick-link-desc">Track estimated sales not realised, courier outliers, and advisory risk flags.</span>
         </a>
+        <a href="{{ route('marketing.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Marketing &amp; Real ROAS</span>
+            <span class="quick-link-desc">Compare platform-reported ad metrics against real UTM-matched delivered orders.</span>
+        </a>
         <a href="{{ route('action-center.index') }}" class="quick-link-card">
             <span class="quick-link-title">Action Center (R&amp;D Lab)</span>
             <span class="quick-link-desc">Review deterministic findings, hypotheses, and weekly actions in English &amp; Bangla.</span>

@@ -72,5 +72,11 @@ return [
         // R11: Repeat-rate decline
         'r11_drop_pp' => 5.0,
         'r11_min_buyers' => 50,
+
+        // R13: Platform-vs-real ROAS gap (T15)
+        'r13_min_coverage_pct' => 50.0,
+        'r13_min_spend' => 1000.0,
+        'r13_min_gap_ratio' => 1.5,
+        'r13_min_gap_diff' => 0.5,
     ],
 ];

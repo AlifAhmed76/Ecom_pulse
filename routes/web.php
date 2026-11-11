@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActionCenterController;
+use App\Http\Controllers\AdImportController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\ExperimentController;
 use App\Http\Controllers\FileAnalysisController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RegisterController;
@@ -72,6 +74,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/courier-loss', [CourierLossController::class, 'index'])->name('courier-loss.index');
+    Route::get('/marketing', [MarketingController::class, 'index'])->name('marketing.index');
     Route::get('/action-center', [ActionCenterController::class, 'index'])->name('action-center.index');
     Route::get('/action-center/findings/{finding}', [ActionCenterController::class, 'show'])->name('action-center.findings.show');
     Route::post('/action-center/findings/{finding}/ai-explain', [ActionCenterController::class, 'explain'])
@@ -115,6 +118,13 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/courier-imports/{batch}/confirm', [CourierImportController::class, 'confirm'])->name('courier-imports.confirm');
         Route::get('/courier-imports/{batch}', [CourierImportController::class, 'show'])->name('courier-imports.show');
         Route::delete('/courier-imports/{batch}', [CourierImportController::class, 'discard'])->name('courier-imports.discard');
+
+        Route::get('/marketing/imports', [AdImportController::class, 'index'])->name('marketing-imports.index');
+        Route::post('/marketing/imports', [AdImportController::class, 'upload'])->name('marketing-imports.upload');
+        Route::get('/marketing/imports/{batch}/map', [AdImportController::class, 'map'])->name('marketing-imports.map');
+        Route::post('/marketing/imports/{batch}/confirm', [AdImportController::class, 'confirm'])->name('marketing-imports.confirm');
+        Route::get('/marketing/imports/{batch}', [AdImportController::class, 'show'])->name('marketing-imports.show');
+        Route::delete('/marketing/imports/{batch}', [AdImportController::class, 'discard'])->name('marketing-imports.discard');
 
         Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
         Route::post('/imports', [ImportController::class, 'upload'])->name('imports.upload');

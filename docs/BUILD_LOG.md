@@ -269,3 +269,21 @@
   - Live Cloudflare/WAF proxy rules cannot run offline (`docs/CLOUDFLARE_WAF.md` documentation-only).
   - Owner interactive 5-question walkthrough on XAMPP PC deferred.
 - **Status:** `T14 DONE - tests: 162 passed, 0 failed`
+
+## T15: Marketing (ad report import and real ROAS)
+**Plan:**
+1. **What I understood:** Add manual-column ad report CSV/XLSX/XML import (`ad_performance_daily`, `AdMapper` with zero guessed column aliases pending a real owner ad CSV, idempotent `AdImporter` on `(tenant_id, platform, campaign, date)`, and `ProcessImportBatch` `ads` support), a `/marketing` dashboard keeping platform-reported metrics (`spend`, `impressions`, `clicks`, `platform_conversions`, `CPA`, `platform ROAS`) strictly separate from real-order metrics (`delivered` revenue matching `orders.utm_campaign`, `real ROAS`, matching coverage %, attribution caveats, data freshness, zero profit claims), plus R&D rule `R13` (platform-vs-real ROAS gap with minimum coverage & spend thresholds, in both `en` and `bn`).
+2. **Files to create/change:** `database/migrations/2026_11_10_000032_create_ad_performance_daily_table.php`, `app/Models/AdPerformanceDaily.php`, `app/Services/Marketing/{AdMapper,AdImporter,MarketingAnalyticsService}.php`, `app/Jobs/ProcessImportBatch.php`, `config/lyp.php`, `app/Services/Rnd/{RuleEngine,FindingTemplates}.php`, `app/Http/Controllers/{MarketingController,AdImportController}.php`, `routes/web.php`, `resources/views/marketing/index.blade.php`, `resources/views/marketing/imports/{index,map,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `tests/Unit/RndTemplatesTest.php`, `tests/Fixtures/synthetic_ads.csv`, `tests/Feature/MarketingAndAdImportTest.php`.
+3. **What could go wrong:** Guessing Meta/Google CSV headers before a real CSV is provided; division by zero when spend, clicks, conversions, or delivered orders equal zero; attributing cancelled/untagged COD orders to ads or blending platform revenue with real order revenue; raising misleading R13 alerts when UTM matching coverage is low (<50%); cross-tenant leakage or duplicate ad rows on re-import.
+4. **Mitigation:** Leave all `AdMapper` defaults `null` with explicit `UNVERIFIED_AGAINST_REAL_DATA` notice, guard every ratio against zero denominators, query only `status = 'delivered'` matched orders for `real_roas`, display explicit UTM tagging + campaign-match coverage %, enforce `r13_min_coverage_pct` + `r13_min_spend` inside `RuleEngine`, and write unit + feature tests for golden math, zero-div safety, idempotency, coverage-gated R13, RBAC, and tenant isolation.
+
+**Result (T15):**
+- **Files created/changed:** `database/migrations/2026_11_10_000032_create_ad_performance_daily_table.php`, `app/Models/AdPerformanceDaily.php`, `app/Services/Marketing/{AdMapper,AdImporter,MarketingAnalyticsService}.php`, `app/Jobs/{ProcessImportBatch,WarmTenantCache}.php`, `config/lyp.php`, `app/Services/Rnd/{RuleEngine,FindingTemplates}.php`, `app/Http/Controllers/{MarketingController,AdImportController}.php`, `routes/web.php`, `resources/views/marketing/index.blade.php`, `resources/views/marketing/imports/{index,map,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `docs/{PROGRESS,BUILD_LOG}.md`, `tests/Unit/RndTemplatesTest.php`, `tests/Fixtures/synthetic_ads.csv`, `tests/Feature/MarketingAndAdImportTest.php`.
+- **Commands run + result:**
+  - `php -l` across new/edited PHP files -> 0 syntax errors.
+  - `php artisan view:cache; php artisan view:clear` -> Blade views compiled cleanly.
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (165 tests, 3040 assertions)` (`MarketingAndAdImportTest`: 3/3 passed).
+- **NOT RUN / UNVERIFIED:**
+  - `UNVERIFIED_AGAINST_REAL_DATA`: no real Meta/Google ad CSV supplied by owner yet; `AdMapper::emptyMapping()` defaults all null and requires manual header selection.
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` (migrations `000017`–`000032` pending XAMPP MariaDB startup on `127.0.0.1:3306`).
+- **Status:** `T15 DONE - tests: 165 passed, 0 failed`

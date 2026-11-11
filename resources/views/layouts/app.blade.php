@@ -41,6 +41,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                     <span>Courier &amp; Loss</span>
                 </a>
+                <a href="{{ route('marketing.index') }}" class="nav-link {{ request()->routeIs('marketing.*') || request()->routeIs('marketing-imports.*') ? 'is-active' : '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                    <span>Marketing</span>
+                </a>
                 <a href="{{ route('action-center.index') }}" class="nav-link {{ request()->routeIs('action-center.*') ? 'is-active' : '' }}">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.5 1 1.3 1 2.3h6c0-1 .3-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
                     <span>Action Center</span>
