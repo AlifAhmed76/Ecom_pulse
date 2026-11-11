@@ -280,8 +280,8 @@ class CourierAnalyticsService
 
         // 2. Loss breakdowns: by courier, area/city, employee, product, cancel_reason
         $lossSplits = [
-            'by_courier' => $this->lostSplitByDimension(clone $baseOrders, "COALESCE(NULLIF(o.courier, ''), 'Unassigned')", 'label', $mixedCurrency),
-            'by_area' => $this->lostSplitByDimension(clone $baseOrders, "COALESCE(NULLIF(o.city, ''), 'Unknown area')", 'label', $mixedCurrency),
+            'by_courier' => $this->lostSplitByDimension(clone $baseOrders, 'o.courier', 'Unassigned', 'label', $mixedCurrency),
+            'by_area' => $this->lostSplitByDimension(clone $baseOrders, 'o.city', 'Unknown area', 'label', $mixedCurrency),
             'by_employee' => $this->lostSplitByEmployee($fromTs, $toTs, $websiteId, $mixedCurrency),
             'by_product' => $this->lostSplitByProduct($fromTs, $toTs, $websiteId, $mixedCurrency),
             'by_cancel_reason' => $this->lostSplitByCancelReason(clone $baseOrders, $mixedCurrency),
@@ -360,32 +360,22 @@ class CourierAnalyticsService
      * @param  \Illuminate\Database\Query\Builder  $baseOrders
      * @return list<array<string, mixed>>
      */
-    private function lostSplitByDimension($baseOrders, string $expr, string $key, bool $mixedCurrency): array
+    private function lostSplitByDimension($baseOrders, string $column, string $fallback, string $key, bool $mixedCurrency): array
     {
         $rows = $baseOrders
             ->whereIn('o.status', ['cancelled', 'returned'])
             ->selectRaw("
-                {$expr} AS grp_label,
+                {$column} AS raw_label,
                 SUM(CASE WHEN o.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders,
                 SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned_orders,
                 SUM(CASE WHEN o.status = 'cancelled' THEN o.total ELSE 0 END) AS cancelled_value,
                 SUM(CASE WHEN o.status = 'returned' THEN o.total ELSE 0 END) AS returned_value,
                 SUM(o.total) AS total_lost_value
             ")
-            ->groupByRaw($expr)
-            ->orderByDesc('total_lost_value')
-            ->orderBy('grp_label')
-            ->limit(100)
+            ->groupBy($column)
             ->get();
 
-        return $rows->map(fn (object $r): array => [
-            $key => (string) $r->grp_label,
-            'cancelled_orders' => (int) $r->cancelled_orders,
-            'returned_orders' => (int) $r->returned_orders,
-            'cancelled_value' => $mixedCurrency ? null : round((float) $r->cancelled_value, 2),
-            'returned_value' => $mixedCurrency ? null : round((float) $r->returned_value, 2),
-            'total_lost_value' => $mixedCurrency ? null : round((float) $r->total_lost_value, 2),
-        ])->all();
+        return $this->finalizeSplitBuckets($rows->all(), $fallback, $key, $mixedCurrency);
     }
 
     /**
@@ -409,27 +399,63 @@ class CourierAnalyticsService
         }
 
         $rows = $q->selectRaw("
-                COALESCE(e.name, 'Unassigned') AS emp_name,
+                e.name AS raw_label,
                 SUM(CASE WHEN o.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders,
                 SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned_orders,
                 SUM(CASE WHEN o.status = 'cancelled' THEN o.total ELSE 0 END) AS cancelled_value,
                 SUM(CASE WHEN o.status = 'returned' THEN o.total ELSE 0 END) AS returned_value,
                 SUM(o.total) AS total_lost_value
             ")
-            ->groupByRaw("COALESCE(e.name, 'Unassigned')")
-            ->orderByDesc('total_lost_value')
-            ->orderBy('emp_name')
-            ->limit(100)
+            ->groupBy('e.name')
             ->get();
 
-        return $rows->map(fn (object $r): array => [
-            'label' => (string) $r->emp_name,
-            'cancelled_orders' => (int) $r->cancelled_orders,
-            'returned_orders' => (int) $r->returned_orders,
-            'cancelled_value' => $mixedCurrency ? null : round((float) $r->cancelled_value, 2),
-            'returned_value' => $mixedCurrency ? null : round((float) $r->returned_value, 2),
-            'total_lost_value' => $mixedCurrency ? null : round((float) $r->total_lost_value, 2),
-        ])->all();
+        return $this->finalizeSplitBuckets($rows->all(), 'Unassigned', 'label', $mixedCurrency);
+    }
+
+    /**
+     * @param  list<object>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function finalizeSplitBuckets(array $rows, string $fallback, string $key, bool $mixedCurrency): array
+    {
+        $buckets = [];
+        foreach ($rows as $r) {
+            $label = trim((string) ($r->raw_label ?? ''));
+            if ($label === '') {
+                $label = $fallback;
+            }
+            if (! isset($buckets[$label])) {
+                $buckets[$label] = [
+                    'label' => $label,
+                    'cancelled_orders' => 0,
+                    'returned_orders' => 0,
+                    'cancelled_sum' => 0.0,
+                    'returned_sum' => 0.0,
+                    'total_lost_sum' => 0.0,
+                ];
+            }
+            $buckets[$label]['cancelled_orders'] += (int) $r->cancelled_orders;
+            $buckets[$label]['returned_orders'] += (int) $r->returned_orders;
+            $buckets[$label]['cancelled_sum'] += (float) $r->cancelled_value;
+            $buckets[$label]['returned_sum'] += (float) $r->returned_value;
+            $buckets[$label]['total_lost_sum'] += (float) $r->total_lost_value;
+        }
+
+        $list = array_values($buckets);
+        usort($list, static function (array $a, array $b): int {
+            $cmp = $b['total_lost_sum'] <=> $a['total_lost_sum'];
+
+            return $cmp !== 0 ? $cmp : strcmp($a['label'], $b['label']);
+        });
+
+        return array_map(fn (array $b): array => [
+            $key => $b['label'],
+            'cancelled_orders' => $b['cancelled_orders'],
+            'returned_orders' => $b['returned_orders'],
+            'cancelled_value' => $mixedCurrency ? null : round($b['cancelled_sum'], 2),
+            'returned_value' => $mixedCurrency ? null : round($b['returned_sum'], 2),
+            'total_lost_value' => $mixedCurrency ? null : round($b['total_lost_sum'], 2),
+        ], array_slice($list, 0, 100));
     }
 
     /**
@@ -483,21 +509,46 @@ class CourierAnalyticsService
         $rows = $baseOrders
             ->where('o.status', 'cancelled')
             ->selectRaw("
-                COALESCE(NULLIF(o.cancel_reason, ''), 'Unspecified') AS reason,
+                o.cancel_reason AS raw_reason,
                 COUNT(*) AS orders_count,
                 SUM(o.total) AS cancelled_value
             ")
-            ->groupByRaw("COALESCE(NULLIF(o.cancel_reason, ''), 'Unspecified')")
-            ->orderByDesc('cancelled_value')
-            ->orderByDesc('orders_count')
-            ->limit(100)
+            ->groupBy('o.cancel_reason')
             ->get();
 
-        return $rows->map(fn (object $r): array => [
-            'reason' => (string) $r->reason,
-            'orders_count' => (int) $r->orders_count,
-            'cancelled_value' => $mixedCurrency ? null : round((float) $r->cancelled_value, 2),
-        ])->all();
+        $buckets = [];
+        foreach ($rows as $r) {
+            $reason = trim((string) ($r->raw_reason ?? ''));
+            if ($reason === '') {
+                $reason = 'Unspecified';
+            }
+            if (! isset($buckets[$reason])) {
+                $buckets[$reason] = [
+                    'reason' => $reason,
+                    'orders_count' => 0,
+                    'cancelled_sum' => 0.0,
+                ];
+            }
+            $buckets[$reason]['orders_count'] += (int) $r->orders_count;
+            $buckets[$reason]['cancelled_sum'] += (float) $r->cancelled_value;
+        }
+
+        $list = array_values($buckets);
+        usort($list, static function (array $a, array $b): int {
+            $valCmp = $b['cancelled_sum'] <=> $a['cancelled_sum'];
+            if ($valCmp !== 0) {
+                return $valCmp;
+            }
+            $cntCmp = $b['orders_count'] <=> $a['orders_count'];
+
+            return $cntCmp !== 0 ? $cntCmp : strcmp($a['reason'], $b['reason']);
+        });
+
+        return array_map(fn (array $b): array => [
+            'reason' => $b['reason'],
+            'orders_count' => $b['orders_count'],
+            'cancelled_value' => $mixedCurrency ? null : round($b['cancelled_sum'], 2),
+        ], array_slice($list, 0, 100));
     }
 
     /**

@@ -25,7 +25,12 @@ if errorlevel 1 exit /b 1
 "%PHP_BIN%" -d extension=zip -r "$req = ['mbstring','pdo_mysql','pdo_sqlite','zip','xmlreader','dom','fileinfo','openssl','curl','zlib']; $miss = []; foreach ($req as $e) { if (!extension_loaded($e)) { $miss[] = $e; } } if ($miss !== []) { fwrite(STDERR, 'Missing PHP extensions: ' . implode(', ', $miss) . PHP_EOL); exit(1); } echo 'All required PHP extensions loaded OK.' . PHP_EOL;"
 if errorlevel 1 exit /b 1
 
-"%PHP_BIN%" -r "if (!extension_loaded('zip')) { echo '[NOTE] extension=zip is not enabled in php.ini by default; use run.bat / run-tests.bat or uncomment extension=zip in php.ini.' . PHP_EOL; }"
+set "COMPOSER_ZIP_FLAG="
+"%PHP_BIN%" -r "exit(extension_loaded('zip') ? 0 : 1);"
+if errorlevel 1 (
+    echo [NOTE] extension=zip is not enabled in php.ini by default; use run.bat / run-tests.bat or uncomment extension=zip in php.ini.
+    set "COMPOSER_ZIP_FLAG=--ignore-platform-req=ext-zip"
+)
 
 REM 2. Ensure required runtime directories exist
 echo [2/7] Ensuring storage and cache directories exist...
@@ -48,7 +53,7 @@ if errorlevel 1 (
         exit /b 1
     )
 ) else (
-    call composer install --no-interaction --prefer-dist
+    call composer install --no-interaction --prefer-dist %COMPOSER_ZIP_FLAG%
     if errorlevel 1 (
         echo [ERROR] composer install failed.
         exit /b 1
@@ -61,7 +66,7 @@ if not exist ".env" (
     copy ".env.example" ".env" >nul
     echo Created .env from .env.example
 ) else (
-    echo .env already exists (kept unchanged).
+    echo .env already exists; keeping existing configuration.
 )
 
 "%PHP_BIN%" -r "$env = file_get_contents('.env'); if (!preg_match('/^APP_KEY=base64:.+/m', $env)) { exit(2); }"

@@ -326,3 +326,16 @@
   - Second-PC / clean-folder full extract & interactive `DEMO_PLAN.md` browser walkthrough deferred to owner PC.
   - Real client Order/Courier/Ad CSVs remain `UNVERIFIED_AGAINST_REAL_DATA`.
 - **Status:** `T17 DONE - tests: 173 passed, 0 failed`
+
+## Live XAMPP / MariaDB Verification & Compatibility Fixes
+- **Restored clean `HEAD` state:** Reverted 4 accidental uncommitted working-tree edits in `app/Services/Chat/{Responder,Retriever,WidgetTokenService}.php` and `app/Services/Security/SecurityEventService.php` back to `4c9da61`.
+- **Fixed `setup.bat` Windows bugs caught during live run:**
+  - Added conditional `--ignore-platform-req=ext-zip` to `composer install` ONLY after `[1/7]` proves `-d extension=zip` works cleanly (so Composer succeeds even when `C:\php-8.2.10\php.ini` leaves `;extension=zip` commented out).
+  - Removed unescaped `)` inside `[4/7]` `else (...)` block (`.env already exists; keeping existing configuration.`).
+- **Fixed MariaDB `ONLY_FULL_GROUP_BY` (`1055`) bug in `app/Services/CourierAnalyticsService.php`:**
+  - Replaced `groupByRaw("COALESCE(NULLIF(...))")` in `lostSplitByDimension`, `lostSplitByEmployee`, and `lostSplitByCancelReason` with portable `groupBy($column)` + PHP merge/coalesce (`finalizeSplitBuckets` and `lostSplitByCancelReason`), eliminating `HTTP 500` on `POST /weekly-reports/build` and `GET /courier-loss` under MariaDB strict mode.
+- **Verified against live XAMPP MariaDB (`127.0.0.1:3306`):**
+  - `cmd /c setup.bat` -> exit `0`, migrations `000015`–`000034` DONE, `db:seed` DONE, `view:cache` DONE.
+  - `php -d extension=zip artisan migrate:status` -> all 37 migration files `[Ran]`.
+  - Live `php -d extension=zip artisan serve` end-to-end HTTP probe (`owner@demostore.test` + `owner@othercompany.test`) -> Demo load (`707` 30d orders), R&D scan (`10` open findings), Weekly report build (`EN`/`BN`), Audit Verify, 24+ routes `HTTP 200`, and strict Tenant B `0` isolation verified.
+  - `php -d extension=zip artisan lyp:prune` -> `Pruned 0 expired nonce(s).`; `php -d extension=zip artisan schedule:list` -> 7 scheduled jobs listed cleanly.
