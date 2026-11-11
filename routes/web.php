@@ -4,6 +4,7 @@ use App\Http\Controllers\ActionCenterController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CourierImportController;
 use App\Http\Controllers\CourierLossController;
 use App\Http\Controllers\CredentialController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\WorkspaceController;
@@ -79,9 +81,23 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/experiments/create', [ExperimentController::class, 'create'])->name('experiments.create');
     Route::post('/experiments', [ExperimentController::class, 'store'])->name('experiments.store');
     Route::get('/experiments/{experiment}', [ExperimentController::class, 'show'])->name('experiments.show');
+    Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots.index');
+    Route::get('/chatbots/{chatbot}', [ChatbotController::class, 'show'])->name('chatbots.show');
     Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
     Route::middleware('role:owner,admin')->group(function (): void {
+        Route::post('/chatbots', [ChatbotController::class, 'store'])->name('chatbots.store');
+        Route::post('/chatbots/{chatbot}', [ChatbotController::class, 'update'])->name('chatbots.update');
+        Route::post('/chatbots/{chatbot}/token', [ChatbotController::class, 'issueToken'])->name('chatbots.token');
+        Route::post('/chatbots/{chatbot}/documents', [ChatbotController::class, 'storeDocument'])->name('chatbots.documents.store');
+        Route::delete('/chatbots/{chatbot}/documents/{document}', [ChatbotController::class, 'destroyDocument'])->name('chatbots.documents.destroy');
+        Route::post('/chatbots/{chatbot}/test-ask', [ChatbotController::class, 'testAsk'])
+            ->middleware('throttle:30,1')
+            ->name('chatbots.test-ask');
+
+        Route::get('/security', [SecurityController::class, 'index'])->name('security.index');
+        Route::post('/security/events/{event}/review', [SecurityController::class, 'reviewEvent'])->name('security.events.review');
+        Route::post('/security/rules/{rule}', [SecurityController::class, 'updateRule'])->name('security.rules.update');
         Route::post('/action-center/scan', [ActionCenterController::class, 'scan'])->name('action-center.scan');
         Route::post('/action-center/findings/{finding}/review', [ActionCenterController::class, 'review'])->name('action-center.findings.review');
         Route::post('/action-center/findings/{finding}/dismiss', [ActionCenterController::class, 'dismiss'])->name('action-center.findings.dismiss');

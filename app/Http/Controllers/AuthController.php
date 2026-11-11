@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\Security\SecurityEventService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,21 @@ class AuthController extends Controller
                 $matched?->tenant_id,
                 null
             );
+
+            $security = app(SecurityEventService::class);
+            $security->record(
+                'login_failed',
+                'medium',
+                $matched?->tenant_id !== null ? (int) $matched->tenant_id : null,
+                null,
+                $request,
+                ['reason' => 'invalid_credentials']
+            );
+
+            if ($matched?->tenant_id !== null && $security->shouldThrottle((int) $matched->tenant_id, 'login_failed', $request)) {
+                $request->attributes->set('_ly_rate_limit_recorded', true);
+                abort(429, 'Too many failed login attempts for this workspace rule.');
+            }
 
             return back()
                 ->withErrors(['email' => 'Invalid email or password.'])

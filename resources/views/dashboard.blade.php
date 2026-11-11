@@ -82,7 +82,15 @@
             <span class="quick-link-title">Websites &amp; Credentials</span>
             <span class="quick-link-desc">Register store domains and issue signed API keys for connectors.</span>
         </a>
+        <a href="{{ route('chatbots.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Chatbots &amp; Knowledge Base</span>
+            <span class="quick-link-desc">Configure grounded store chat widgets, KB FAQs, leads, and handoff.</span>
+        </a>
         @if($user->canManage())
+            <a href="{{ route('security.index') }}" class="quick-link-card">
+                <span class="quick-link-title">Security Events &amp; Rules</span>
+                <span class="quick-link-desc">Review login failures, rate limits, probes, and opt-in rules.</span>
+            </a>
             <a href="{{ route('workspace.show') }}" class="quick-link-card">
                 <span class="quick-link-title">Workspace &amp; Members</span>
                 <span class="quick-link-desc">Inspect company workspace isolation and active user roles.</span>
