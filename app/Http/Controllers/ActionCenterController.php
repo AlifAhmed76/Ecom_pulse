@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RunLlmExplanation;
 use App\Jobs\RunRndScan;
 use App\Models\AuditLog;
 use App\Models\ResearchFinding;
 use App\Models\Website;
+use App\Services\Llm\LlmClient;
 use App\Services\MetricsService;
 use App\Services\Rnd\FindingTemplates;
 use App\Services\Rnd\RuleEngine;
@@ -135,7 +137,7 @@ class ActionCenterController extends Controller
         ]);
     }
 
-    public function show(Request $request, ResearchFinding $finding): View
+    public function show(Request $request, ResearchFinding $finding, LlmClient $llm): View
     {
         $finding->load([
             'website:id,name,currency',
@@ -160,7 +162,35 @@ class ActionCenterController extends Controller
             'locale' => $locale,
             'bnDigits' => $bnDigits,
             'labels' => FindingTemplates::uiLabels($locale),
+            'llmDriver' => $llm->driver(),
+            'llmUsage' => $llm->tenantUsageThisMonth((int) $request->user()->tenant_id),
         ]);
+    }
+
+    public function explain(Request $request, ResearchFinding $finding, LlmClient $llm): RedirectResponse
+    {
+        $user = $request->user();
+        [$locale] = $this->resolveLocale($request);
+
+        if (! $llm->isEnabled()) {
+            return back()->with('err', 'AI explanations are currently off (LLM_DRIVER=none). Set LLM_DRIVER=ollama (local offline) or openai/anthropic in .env and start `php artisan queue:work --queue=ai` (see docs/LLM_SETUP.md).');
+        }
+
+        $usage = $llm->tenantUsageThisMonth((int) $user->tenant_id);
+        if ($usage['total_tokens'] >= $usage['budget']) {
+            return back()->with('err', "Monthly AI token budget ({$usage['budget']}) is already used for this workspace.");
+        }
+
+        RunLlmExplanation::dispatch((int) $user->tenant_id, (int) $finding->id, $locale)->onQueue('ai');
+
+        AuditLog::record(
+            'rnd.finding.ai_explain',
+            "Queued optional AI explanation for finding #{$finding->id} ({$finding->rule_code})",
+            (int) $user->tenant_id,
+            $user->id
+        );
+
+        return back()->with('ok', "AI explanation queued on the 'ai' queue. Reload in a few seconds once processed by the AI worker.");
     }
 
     public function scan(Request $request, RuleEngine $engine): RedirectResponse

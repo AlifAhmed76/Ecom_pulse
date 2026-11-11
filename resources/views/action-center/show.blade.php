@@ -312,4 +312,54 @@
         @endif
     </section>
 </div>
+
+<div class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">{{ $labels['ai_title'] }}</h2>
+            <p class="help-text">Queue: <span class="mono">ai</span> &middot; Driver: <span class="mono">{{ $llmDriver }}</span> &middot; Tokens this month: <span class="mono">{{ number_format((int) ($llmUsage['total_tokens'] ?? 0)) }} / {{ number_format((int) ($llmUsage['budget'] ?? 0)) }}</span></p>
+        </div>
+        <form method="POST" action="{{ route('action-center.findings.ai-explain', $finding) }}">
+            @csrf
+            <button type="submit" class="btn btn--secondary">{{ $labels['ai_button'] }}</button>
+        </form>
+    </div>
+
+    @if($llmDriver === 'none')
+        <div class="alert alert--info" role="note">
+            {{ $labels['ai_disabled_help'] }}
+        </div>
+    @elseif($locale === 'bn')
+        <div class="alert alert--warn" role="note">
+            {{ $labels['ai_bn_caveat'] }}
+        </div>
+    @endif
+
+    @if($finding->ai_error)
+        <div class="alert alert--warn" role="alert">
+            AI note status: {{ $finding->ai_error }}
+        </div>
+    @endif
+
+    @if($finding->ai_note)
+        <div class="baseline-box">
+            <div class="panel-head">
+                <span class="badge badge--warn">{{ $labels['ai_label'] }}</span>
+                <span class="help-text mono">
+                    Model: {{ $finding->ai_model ?? 'unknown' }}
+                    @if($finding->ai_generated_at)
+                        &middot; {{ $finding->ai_generated_at->format('Y-m-d H:i') }}
+                    @endif
+                </span>
+            </div>
+            @foreach((preg_split('/\r?\n/', (string) $finding->ai_note) ?: []) as $aiParagraph)
+                @if(trim($aiParagraph) !== '')
+                    <p>{{ $aiParagraph }}</p>
+                @endif
+            @endforeach
+        </div>
+    @elseif($llmDriver !== 'none')
+        <p class="muted">No AI explanation generated for this finding yet. Click <strong>{{ $labels['ai_button'] }}</strong> to queue one on the <span class="mono">ai</span> queue.</p>
+    @endif
+</div>
 @endsection

@@ -54,6 +54,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/system/cache-clear', [SystemController::class, 'clearCache'])
         ->middleware(['role:owner,admin', 'throttle:10,1'])
         ->name('system.cache-clear');
+    Route::post('/system/llm-ping', [SystemController::class, 'pingLlm'])
+        ->middleware(['role:owner,admin', 'throttle:10,1'])
+        ->name('system.llm-ping');
 
     Route::get('/audit', [AuditController::class, 'index'])
         ->middleware('role:owner,admin')
@@ -69,6 +72,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/courier-loss', [CourierLossController::class, 'index'])->name('courier-loss.index');
     Route::get('/action-center', [ActionCenterController::class, 'index'])->name('action-center.index');
     Route::get('/action-center/findings/{finding}', [ActionCenterController::class, 'show'])->name('action-center.findings.show');
+    Route::post('/action-center/findings/{finding}/ai-explain', [ActionCenterController::class, 'explain'])
+        ->middleware('throttle:10,1')
+        ->name('action-center.findings.ai-explain');
     Route::get('/experiments', [ExperimentController::class, 'index'])->name('experiments.index');
     Route::get('/experiments/create', [ExperimentController::class, 'create'])->name('experiments.create');
     Route::post('/experiments', [ExperimentController::class, 'store'])->name('experiments.store');

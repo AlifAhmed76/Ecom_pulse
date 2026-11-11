@@ -58,6 +58,7 @@ class ResearchFinding extends Model
             'first_seen_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'ai_generated_at' => 'datetime',
         ];
     }
 

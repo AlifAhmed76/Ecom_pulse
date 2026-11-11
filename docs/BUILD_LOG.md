@@ -231,3 +231,22 @@
   - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
   - Owner subjective walkthrough ("Run one full experiment on demo data from finding to lesson") deferred to owner PC check.
 - **Status:** `T12 DONE - tests: 150 passed, 0 failed`
+
+## T13: Optional LLM explanation
+**Plan:**
+1. **What I understood:** Add an optional, strictly bounded AI explanation helper per R&D finding across `none`, `ollama`, `openai` (OpenAI-compatible), and `anthropic` drivers using verified HTTP endpoints/payloads, strict input fencing + size cap + per-tenant monthly token budget, a prompt/answer-free `llm_calls` ledger, `RunLlmExplanation` queued on `ai` (`timeout=180`), `"AI explanation (optional)"` UI with `"AI-generated hypothesis - not proof"`, System page usage/Test connection control, `php artisan llm:ping`, and offline Ollama docs — while leaving every deterministic metric, number, and page completely intact when `LLM_DRIVER=none` or the provider is offline.
+2. **Files to create/change:** `config/llm.php`, `.env.example`, `database/migrations/2026_11_10_000022_add_ai_columns_to_research_findings_table.php`, `database/migrations/2026_11_10_000023_create_llm_calls_table.php`, `app/Models/{LlmCall,ResearchFinding}.php`, `app/Services/Llm/{LlmUnavailable,LlmBudgetExceeded,Policy,LlmClient}.php`, `app/Jobs/RunLlmExplanation.php`, `app/Console/Commands/LlmPingCommand.php`, `app/Http/Controllers/{ActionCenterController,SystemController}.php`, `app/Services/Rnd/FindingTemplates.php`, `routes/web.php`, `resources/views/{action-center/show,system/index}.blade.php`, `docs/{LLM_SETUP,PROGRESS,BUILD_LOG}.md`, `tests/Feature/LlmExplanationTest.php`.
+3. **What could go wrong:** Untrusted string fields inside finding evidence (e.g., store/product/courier names) breaking out of prompt fences; oversized payloads or exhausted tenant budgets triggering paid HTTP requests; prompt/answer text or API keys leaking into `llm_calls` or Laravel logs; queue job or provider failure breaking Action Center views; `ai` queue not explicitly assigned; Bangla quality with small local models misrepresenting confidence.
+4. **Mitigation:** Neutralize tag delimiters before wrapping inside `<untrusted_data>...</untrusted_data>`, enforce size cap + per-tenant monthly token sum BEFORE any `Http::` request, store only metadata counters in `llm_calls`, force `$this->onQueue('ai')` + `$timeout = 180` inside `RunLlmExplanation` without touching finding metrics/status, sanitize errors, and verify all drivers + edge cases with `Http::fake()`, `Queue::fake()`, and tenant-isolation tests.
+
+**Result (T13):**
+- **Files created/changed:** `config/llm.php`, `.env.example`, `database/migrations/2026_11_10_000022_add_ai_columns_to_research_findings_table.php`, `database/migrations/2026_11_10_000023_create_llm_calls_table.php`, `app/Models/{LlmCall,ResearchFinding}.php`, `app/Services/Llm/{LlmUnavailable,LlmBudgetExceeded,Policy,LlmClient}.php`, `app/Jobs/RunLlmExplanation.php`, `app/Console/Commands/LlmPingCommand.php`, `app/Http/Controllers/{ActionCenterController,SystemController}.php`, `app/Services/Rnd/FindingTemplates.php`, `routes/web.php`, `resources/views/{action-center/show,system/index}.blade.php`, `docs/{LLM_SETUP,PROGRESS,BUILD_LOG}.md`, `tests/Feature/LlmExplanationTest.php`.
+- **Commands run + result:**
+  - `php -l` across new/edited PHP files -> 0 syntax errors.
+  - `php artisan view:cache; php artisan view:clear` -> Blade views compiled cleanly.
+  - `php artisan llm:ping` -> exit code `1` (`NOT READY: LLM is disabled (LLM_DRIVER=none)...`).
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (155 tests, 2766 assertions)` (`LlmExplanationTest`: 5/5 passed).
+- **NOT RUN / UNVERIFIED:**
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` (migrations `000017`–`000023` pending XAMPP MariaDB startup on `127.0.0.1:3306`).
+  - Live Ollama daemon click test deferred to owner PC (`docs/LLM_SETUP.md`).
+- **Status:** `T13 DONE - tests: 155 passed, 0 failed`
