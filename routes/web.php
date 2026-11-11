@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
@@ -59,6 +60,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
     Route::middleware('role:owner,admin')->group(function (): void {
         Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');

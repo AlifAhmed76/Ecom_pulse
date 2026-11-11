@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\AnalyticsService;
 use App\Services\MetricsService;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,5 +31,6 @@ class WarmTenantCache implements ShouldBeUnique, ShouldQueue
     public function handle(): void
     {
         MetricsService::for($this->tenantId)->rebuildDashboard();
+        AnalyticsService::for($this->tenantId)->rebuildDefault();
     }
 }

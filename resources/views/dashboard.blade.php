@@ -62,6 +62,10 @@
             <span class="quick-link-title">Products &amp; Stock</span>
             <span class="quick-link-desc">Monitor SKU pricing, unit cost coverage, and low-stock items.</span>
         </a>
+        <a href="{{ route('analytics.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Analytics</span>
+            <span class="quick-link-desc">Inspect KPIs, courier &amp; staff scorecards, stock cover, and data quality.</span>
+        </a>
         <a href="{{ route('websites.index') }}" class="quick-link-card">
             <span class="quick-link-title">Websites &amp; Credentials</span>
             <span class="quick-link-desc">Register store domains and issue signed API keys for connectors.</span>

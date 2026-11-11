@@ -156,3 +156,21 @@
   - `php -d extension=zip artisan test` spawns a child PHP process without `-d extension=zip` (`ZipArchive` missing in child until `extension=zip` is uncommented in `C:\php-8.2.10\php.ini`); full suite verified directly via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
   - `UNVERIFIED_AGAINST_REAL_DATA`: no real shop order export (CSV/XLSX/XML) supplied yet by owner.
 - **Status:** `T08 DONE - tests: 121 passed, 0 failed (UNVERIFIED_AGAINST_REAL_DATA)`
+
+## T09: Analytics page
+**Plan:**
+1. Implement `App\Services\AnalyticsService` as the single source of analytics SQL using portable ANSI SQL (`DATE()`, `CASE WHEN`, `NOT EXISTS`, `COALESCE`), explicit `tenant_id` scoping, and 30-min `TenantCache` caching per filter set (`7d`/`30d`/`90d`/custom + optional `website_id`).
+2. Compute every metric, repeat purchase rate, courier `< 20` minimum-sample guard, non-import employee response time (diff in PHP from `MIN(changed_at)`), stock cover days, estimated contribution (`< 60%` coverage guard), mixed-currency warning, and 0–100 data-quality score strictly per `METRICS_DEFINITIONS.md`.
+3. Build `AnalyticsController` (with cross-tenant `website_id` 404 guard and in-memory pagination on cached arrays so repeated loads perform zero DB analytics queries) and `resources/views/analytics/index.blade.php` with local Chart.js daily trend & status funnel & top products charts, tables, data-quality panel, freshness header, and definitions panel.
+4. Wire `/analytics` route, Analytics sidebar & dashboard quick links, and warm default 30d analytics in `WarmTenantCache`.
+5. Write `tests/Feature/AnalyticsTest.php` covering golden-dataset hand-calculated values, repeat rate, non-import response time, minimum-sample & cost-coverage guards, mixed-currency warning, cross-tenant website filter 404, tenant isolation, 0-query cache hit, and data-quality arithmetic; run tests & lint, update `PROGRESS.md`, and commit.
+
+**Result (T09):**
+- **Files created/changed:** `app/Services/AnalyticsService.php`, `app/Http/Controllers/AnalyticsController.php`, `resources/views/analytics/index.blade.php`, `resources/views/layouts/app.blade.php`, `resources/views/dashboard.blade.php`, `app/Jobs/WarmTenantCache.php`, `routes/web.php`, `tests/Feature/AnalyticsTest.php`, `docs/PROGRESS.md`, `docs/BUILD_LOG.md`.
+- **Commands run + result:**
+  - `php -l` across `app/`, `routes/`, `tests/` -> `PHP lint OK`.
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (128 tests, 898 assertions)` (`AnalyticsTest`: 7/7 passed).
+- **NOT RUN / UNVERIFIED:**
+  - Interactive browser Chart.js canvas verification on XAMPP PC deferred to owner verification (`T09` Owner verification step).
+  - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
+- **Status:** `T09 DONE - tests: 128 passed, 0 failed`
