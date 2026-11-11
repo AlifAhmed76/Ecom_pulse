@@ -37,6 +37,12 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg>
                     <span>Websites</span>
                 </a>
+                @if($currentUser && $currentUser->canManage())
+                    <a href="{{ route('imports.index') }}" class="nav-link {{ request()->routeIs('imports.*') || request()->routeIs('analysis.*') ? 'is-active' : '' }}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Import</span>
+                    </a>
+                @endif
             </div>
 
             @if($currentUser && $currentUser->canManage())
@@ -109,6 +115,7 @@
         </main>
     </div>
 </div>
+@stack('scripts')
 <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}" defer></script>
 </body>
 </html>

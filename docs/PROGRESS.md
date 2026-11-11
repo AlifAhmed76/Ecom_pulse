@@ -9,7 +9,7 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - [x] T05 Cache layer, MetricsService, System page, plain dashboard — TESTED (46 passed, 0 failed)
 - [x] T06 Scheduler & workers — TESTED (50 passed, 0 failed)
 - [x] T07 Orders domain + sync API — TESTED (110 passed, 0 failed)
-- [ ] T08 File import (CSV/XLSX/XML)
+- [x] T08 File import (CSV/XLSX/XML) — TESTED (121 passed, 0 failed; UNVERIFIED_AGAINST_REAL_DATA)
 - [ ] T09 Analytics page
 - [ ] T10 Courier & loss report
 - [ ] T11 R&D rule engine + Action Center
@@ -29,3 +29,4 @@ Laravel version: 12.71.0 (laravel/laravel v12.12.2)   PHP: 8.2.10   Date started
 - T05: TESTED (`php -d extension=zip artisan test` -> Tests: 46 passed (407 assertions), incl. `CacheAndMetricsTest`: 1800s TTL, 0-query cached hit, tenant-isolated version bump clear, ETag/304, auth/role guards, audited clear, non-auth job context, lock timeout fallback).
 - T06: TESTED (`php -d extension=zip artisan test` -> Tests: 50 passed (421 assertions), incl. `SchedulerAndWorkersTest`: `RefreshAllTenants` per-tenant dispatch, `ShouldBeUnique` deduplication, `WarmTenantCache`, `WorkerBeat`, `lyp:prune`; `php artisan schedule:list` verified).
 - T07: TESTED (`php -d extension=zip artisan test` -> Tests: 110 passed (541 assertions), incl. `StatusMapperAndParseTest` (58 status cases + Bangla/EN parser) and `OrdersSyncAndUiTest` (idempotency, stale guard, append-only history, cost fallback, customer hash/no-PII, tenant isolation, O(1) N+1 query check); MySQL `migrate --force` succeeded).
+- T08: TESTED (`php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (121 tests, 743 assertions)`, incl. `ImportReaderAndMapperTest` & `OrderImportTest` covering UTF-8 BOM/semicolon/tab/pipe CSV, OpenSpout XLSX date cells + first-sheet-only, nested XML + DOCTYPE/ENTITY XXE rejection, `ColumnMatcher` prefix-collision fix, `(100)` negatives, whole-order mode, adjacency + non-adjacent repeat, idempotent re-import, cross-tenant 404, analyst 403, extension/20MB caps, private file cleanup, queued job + sync fallback, Quick File Analysis w/ local Chart.js). NOT RUN / UNVERIFIED: MySQL `migrate --force` (XAMPP MariaDB stopped on 3306); `artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; `UNVERIFIED_AGAINST_REAL_DATA` (no real owner export provided yet).

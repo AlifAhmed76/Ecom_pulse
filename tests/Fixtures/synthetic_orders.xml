@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orders>
+    <order id="XML-301">
+        <status>Shipped</status>
+        <ordered_at>2026-11-04</ordered_at>
+        <shipping>60</shipping>
+        <discount>0</discount>
+        <courier>Pathao</courier>
+        <customer>
+            <name>Farhana</name>
+            <phone>01755000555</phone>
+        </customer>
+        <items>
+            <item>
+                <name>Silk Scarf</name>
+                <sku>SCF-9</sku>
+                <quantity>2</quantity>
+                <unit_price>450</unit_price>
+            </item>
+            <item>
+                <name>Brooch</name>
+                <sku>BRC-2</sku>
+                <quantity>1</quantity>
+                <unit_price>150</unit_price>
+            </item>
+        </items>
+    </order>
+</orders>

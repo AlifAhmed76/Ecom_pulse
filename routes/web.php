@@ -4,6 +4,8 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FileAnalysisController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RegisterController;
@@ -57,6 +59,19 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+
+    Route::middleware('role:owner,admin')->group(function (): void {
+        Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
+        Route::post('/imports', [ImportController::class, 'upload'])->name('imports.upload');
+        Route::get('/imports/{batch}/map', [ImportController::class, 'map'])->name('imports.map');
+        Route::post('/imports/{batch}/confirm', [ImportController::class, 'confirm'])->name('imports.confirm');
+        Route::get('/imports/{batch}', [ImportController::class, 'show'])->name('imports.show');
+        Route::delete('/imports/{batch}', [ImportController::class, 'discard'])->name('imports.discard');
+
+        Route::get('/file-analysis', [FileAnalysisController::class, 'index'])->name('analysis.index');
+        Route::post('/file-analysis', [FileAnalysisController::class, 'analyze'])->name('analysis.analyze');
+        Route::get('/file-analysis/{analysis}', [FileAnalysisController::class, 'show'])->name('analysis.show');
+    });
 
     Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
     Route::get('/websites/create', [WebsiteController::class, 'create'])->name('websites.create');

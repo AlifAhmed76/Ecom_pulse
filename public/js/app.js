@@ -80,4 +80,31 @@
             }, 60000);
         }
     }
+
+    function renderCharts() {
+        if (typeof window.Chart !== 'function') {
+            return;
+        }
+        var canvases = document.querySelectorAll('canvas[data-chart-source]');
+        for (var i = 0; i < canvases.length; i++) {
+            var canvas = canvases[i];
+            var srcId = canvas.getAttribute('data-chart-source');
+            var scriptEl = srcId ? document.getElementById(srcId) : null;
+            if (!scriptEl) {
+                continue;
+            }
+            try {
+                var cfg = JSON.parse(scriptEl.textContent || '{}');
+                new window.Chart(canvas.getContext('2d'), cfg);
+            } catch (e) {
+                // Ignore malformed chart payloads
+            }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderCharts);
+    } else {
+        renderCharts();
+    }
 })();

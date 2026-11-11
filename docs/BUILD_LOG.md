@@ -137,3 +137,22 @@
   - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` -> all 7 T07 migrations DONE.
 - **NOT RUN / UNVERIFIED:** Live `connector-sample/lyp_send.php` end-to-end execution against `php artisan serve` deferred to owner PC / T17 final live verification.
 - **Status:** `T07 DONE - tests: 110 passed, 0 failed`
+
+## T08: File import: orders (CSV / XLSX / XML)
+**Plan:**
+1. Create migrations & tenant-scoped models for `import_batches` and `analyses`, plus copy local Chart.js bundle to `public/js/chart.umd.js`.
+2. Implement `App\Services\Import\RowReader` (UTF-8 BOM & multi-delimiter CSV, OpenSpout ^4 XLSX with DateTime/serial dates, `LIBXML_NONET` XML with `<!DOCTYPE`/entity rejection and nested-item expansion) and `App\Support\ColumnMatcher` (exact alias then length >= 5 substring, single-use assignment).
+3. Implement `OrderMapper` (exact `IMPORT_SPEC.md` aliases, `(100)` negatives, ambiguous date rule) and `OrderImporter` (adjacent grouping, within-batch merge vs cross-batch replace, product-free total mode, status mapping table, skipped reasons, private storage file cleanup, tenant cache clear + warm dispatch) plus `ProcessImportBatch` job with offline no-worker synchronous fallback.
+4. Build `ImportController` (`role:owner,admin`, 20 MB cap, private storage, mapping UI with explicit common-name/date warnings, confirm, result, discard) and `FileAnalysisController` (reusing `RowReader` without writing to `orders`, saving summary to `analyses`, rendering local Chart.js bar/doughnut charts CSP-safely).
+5. Create `tests/Fixtures/synthetic_orders.{csv,xlsx,xml}` and `synthetic_xxe.xml`, write unit/feature tests, run `php artisan test`, `php -l`, MySQL migrate, mark `UNVERIFIED_AGAINST_REAL_DATA` where owner files do not exist yet, update `PROGRESS.md`, and commit.
+
+**Result (T08):**
+- **Files created/changed:** `database/migrations/2026_11_10_000015_create_import_batches_table.php`, `database/migrations/2026_11_10_000016_create_analyses_table.php`, `app/Models/{ImportBatch,Analysis}.php`, `app/Support/ColumnMatcher.php` (longest-alias Pass 2 priority to prevent `customer` stealing `customer_phone`/`mobile_number`), `app/Services/Import/{RowReader,OrderMapper,OrderImporter}.php`, `app/Jobs/ProcessImportBatch.php`, `app/Http/Controllers/{ImportController,FileAnalysisController}.php`, `routes/web.php`, `public/js/{chart.umd.js,app.js}`, `resources/views/layouts/app.blade.php`, `resources/views/imports/{index,map,show}.blade.php`, `resources/views/analysis/{index,show}.blade.php`, `tests/Fixtures/synthetic_orders.{csv,xlsx,xml}`, `tests/Fixtures/synthetic_xxe.xml`, `tests/Unit/ImportReaderAndMapperTest.php`, `tests/Feature/OrderImportTest.php`, `docs/PROGRESS.md`.
+- **Commands run + result:**
+  - `php -l` across all `app/`, `database/`, `routes/`, `tests/` PHP files -> 0 syntax errors (`PHP lint passed on all files`).
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (121 tests, 743 assertions)`.
+- **NOT RUN / UNVERIFIED:**
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` failed to connect (`SQLSTATE[HY000] [2002]`, XAMPP MySQL not started on `127.0.0.1:3306`).
+  - `php -d extension=zip artisan test` spawns a child PHP process without `-d extension=zip` (`ZipArchive` missing in child until `extension=zip` is uncommented in `C:\php-8.2.10\php.ini`); full suite verified directly via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
+  - `UNVERIFIED_AGAINST_REAL_DATA`: no real shop order export (CSV/XLSX/XML) supplied yet by owner.
+- **Status:** `T08 DONE - tests: 121 passed, 0 failed (UNVERIFIED_AGAINST_REAL_DATA)`
