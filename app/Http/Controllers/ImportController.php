@@ -21,6 +21,7 @@ class ImportController extends Controller
     public function index(): View
     {
         $batches = ImportBatch::query()
+            ->where('kind', 'orders')
             ->with(['website:id,name', 'user:id,name'])
             ->orderByDesc('id')
             ->paginate(15);
@@ -101,6 +102,8 @@ class ImportController extends Controller
 
     public function map(ImportBatch $batch, RowReader $reader): View|RedirectResponse
     {
+        abort_unless($batch->kind === 'orders', 404);
+
         if (in_array($batch->status, ['queued', 'processing', 'done', 'failed'], true)
             || $batch->stored_path === null
             || ! Storage::disk('local')->exists($batch->stored_path)) {
@@ -124,6 +127,8 @@ class ImportController extends Controller
 
     public function confirm(Request $request, ImportBatch $batch, OrderImporter $importer): RedirectResponse
     {
+        abort_unless($batch->kind === 'orders', 404);
+
         if (in_array($batch->status, ['queued', 'processing', 'done', 'failed'], true)
             || $batch->stored_path === null
             || ! Storage::disk('local')->exists($batch->stored_path)) {
@@ -169,6 +174,7 @@ class ImportController extends Controller
 
     public function show(ImportBatch $batch): View
     {
+        abort_unless($batch->kind === 'orders', 404);
         $batch->load(['website:id,name', 'user:id,name']);
 
         return view('imports.show', compact('batch'));
@@ -176,6 +182,7 @@ class ImportController extends Controller
 
     public function discard(ImportBatch $batch): RedirectResponse
     {
+        abort_unless($batch->kind === 'orders', 404);
         if ($batch->stored_path !== null && Storage::disk('local')->exists($batch->stored_path)) {
             Storage::disk('local')->delete($batch->stored_path);
         }

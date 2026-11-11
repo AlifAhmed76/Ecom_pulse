@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\RefreshAllTenants;
+use App\Jobs\ScanAllTenantsRisk;
 use App\Jobs\WorkerBeat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,6 +23,11 @@ Schedule::job(new WorkerBeat(), 'high')
 Schedule::job(new RefreshAllTenants(), 'default')
     ->name('refresh-all-tenants')
     ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
+Schedule::job(new ScanAllTenantsRisk(), 'default')
+    ->name('risk-scan-all-tenants')
+    ->hourly()
     ->withoutOverlapping();
 
 Schedule::command('lyp:prune')

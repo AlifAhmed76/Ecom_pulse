@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ImportBatch;
+use App\Services\Courier\CourierImporter;
 use App\Services\Import\OrderImporter;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -17,7 +18,7 @@ class ProcessImportBatch implements ShouldQueue
     {
     }
 
-    public function handle(OrderImporter $importer): void
+    public function handle(?OrderImporter $importer = null, ?CourierImporter $courierImporter = null): void
     {
         $batch = ImportBatch::withoutGlobalScopes()->find($this->batchId);
         if ($batch === null) {
@@ -25,7 +26,9 @@ class ProcessImportBatch implements ShouldQueue
         }
 
         if ($batch->kind === 'orders') {
-            $importer->processBatch($batch);
+            ($importer ?? app(OrderImporter::class))->processBatch($batch);
+        } elseif ($batch->kind === 'courier') {
+            ($courierImporter ?? app(CourierImporter::class))->processBatch($batch);
         }
     }
 }

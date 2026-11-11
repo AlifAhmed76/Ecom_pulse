@@ -3,6 +3,8 @@
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CourierImportController;
+use App\Http\Controllers\CourierLossController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FileAnalysisController;
@@ -61,8 +63,19 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/courier-loss', [CourierLossController::class, 'index'])->name('courier-loss.index');
 
     Route::middleware('role:owner,admin')->group(function (): void {
+        Route::post('/courier-loss/scan', [CourierLossController::class, 'scan'])->name('courier-loss.scan');
+        Route::post('/courier-loss/flags/{flag}/review', [CourierLossController::class, 'review'])->name('courier-loss.flags.review');
+
+        Route::get('/courier-imports', [CourierImportController::class, 'index'])->name('courier-imports.index');
+        Route::post('/courier-imports', [CourierImportController::class, 'upload'])->name('courier-imports.upload');
+        Route::get('/courier-imports/{batch}/map', [CourierImportController::class, 'map'])->name('courier-imports.map');
+        Route::post('/courier-imports/{batch}/confirm', [CourierImportController::class, 'confirm'])->name('courier-imports.confirm');
+        Route::get('/courier-imports/{batch}', [CourierImportController::class, 'show'])->name('courier-imports.show');
+        Route::delete('/courier-imports/{batch}', [CourierImportController::class, 'discard'])->name('courier-imports.discard');
+
         Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
         Route::post('/imports', [ImportController::class, 'upload'])->name('imports.upload');
         Route::get('/imports/{batch}/map', [ImportController::class, 'map'])->name('imports.map');

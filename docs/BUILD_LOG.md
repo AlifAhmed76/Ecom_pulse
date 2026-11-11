@@ -174,3 +174,22 @@
   - Interactive browser Chart.js canvas verification on XAMPP PC deferred to owner verification (`T09` Owner verification step).
   - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
 - **Status:** `T09 DONE - tests: 128 passed, 0 failed`
+
+## T10: Courier report import, loss report, scorecard, suspicious-order flags
+**Plan:**
+1. Create `courier_shipments` and `risk_flags` migrations plus `CourierShipment` and `RiskFlag` models (`BelongsToTenant`).
+2. Build `CourierMapper` & `CourierImporter` (strictly NO guessed vendor column aliases — manual dropdown mapping + `UNVERIFIED_AGAINST_REAL_DATA` notice; `consignment_id -> order_ref -> customer_key + cod_amount within 1d` unique match, matching coverage %, unmatched retention, `order_status_history` `source=courier` append, `ProcessImportBatch` support).
+3. Build `CourierAnalyticsService` (loss report splits, return handling cost when courier fees exist, courier & area scorecards with `<20` insufficient-data guard and `p<0.05, n>=30` two-proportion z-test outlier label `"Statistically unusual"`, cached 30 min via `TenantCache`).
+4. Build `RiskScannerService` (advisory rules S1/S2/S3 with fingerprint dedupe, `customer_key` hash only, zero order mutations) + `RunRiskScan` / `ScanAllTenantsRisk` hourly schedule and manual scan/review actions (`owner|admin` only).
+5. Build `CourierImportController`, `CourierLossController`, Blade views, nav/dashboard links, and `tests/Feature/CourierAndLossTest.php` covering golden loss math, `<20` & `n>=30` z-test boundaries, S1/S2/S3 boundaries, advisory review non-mutation, matching coverage, and tenant isolation.
+
+**Result (T10):**
+- **Files created/changed:** `database/migrations/2026_11_10_000017_create_courier_shipments_table.php`, `database/migrations/2026_11_10_000018_create_risk_flags_table.php`, `app/Models/{CourierShipment,RiskFlag}.php`, `app/Services/Courier/{CourierMapper,CourierImporter}.php`, `app/Services/{CourierAnalyticsService,RiskScannerService}.php`, `app/Jobs/{ProcessImportBatch,RunRiskScan,ScanAllTenantsRisk,WarmTenantCache}.php`, `app/Http/Controllers/{ImportController,CourierImportController,CourierLossController}.php`, `routes/{web,console}.php`, `resources/views/courier/index.blade.php`, `resources/views/courier/imports/{index,map,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `public/css/app.css`, `tests/Fixtures/synthetic_courier.csv`, `tests/Feature/CourierAndLossTest.php`, `docs/{PROGRESS,BUILD_LOG}.md`.
+- **Commands run + result:**
+  - `php artisan schedule:list` -> shows `risk-scan-all-tenants` (`0 * * * *`).
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (133 tests, 1017 assertions)` (`CourierAndLossTest`: 5/5 passed).
+- **NOT RUN / UNVERIFIED:**
+  - `UNVERIFIED_AGAINST_REAL_DATA`: no real owner courier CSV supplied; explicit manual dropdown mapping required (zero auto-guessed aliases) and verified only against `tests/Fixtures/synthetic_courier.csv`.
+  - MySQL `php -d extension=zip artisan migrate --force` for `000017`–`000018` pending XAMPP MariaDB startup on owner PC.
+  - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
+- **Status:** `T10 DONE - tests: 133 passed, 0 failed (UNVERIFIED_AGAINST_REAL_DATA)`

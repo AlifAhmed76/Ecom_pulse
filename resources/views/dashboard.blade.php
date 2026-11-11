@@ -66,6 +66,10 @@
             <span class="quick-link-title">Analytics</span>
             <span class="quick-link-desc">Inspect KPIs, courier &amp; staff scorecards, stock cover, and data quality.</span>
         </a>
+        <a href="{{ route('courier-loss.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Courier &amp; Loss</span>
+            <span class="quick-link-desc">Track estimated sales not realised, courier outliers, and advisory risk flags.</span>
+        </a>
         <a href="{{ route('websites.index') }}" class="quick-link-card">
             <span class="quick-link-title">Websites &amp; Credentials</span>
             <span class="quick-link-desc">Register store domains and issue signed API keys for connectors.</span>

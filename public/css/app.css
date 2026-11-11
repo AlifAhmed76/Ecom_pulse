@@ -912,6 +912,14 @@ td.num {
     margin-bottom: 0;
 }
 
+.mb-sm {
+    margin-bottom: 14px;
+}
+
+.field--narrow {
+    max-width: 360px;
+}
+
 /* Responsive */
 @media (max-width: 860px) {
     .sidebar {
