@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActionCenterController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FileAnalysisController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RegisterController;
@@ -64,8 +66,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/courier-loss', [CourierLossController::class, 'index'])->name('courier-loss.index');
+    Route::get('/action-center', [ActionCenterController::class, 'index'])->name('action-center.index');
+    Route::get('/action-center/findings/{finding}', [ActionCenterController::class, 'show'])->name('action-center.findings.show');
+    Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
     Route::middleware('role:owner,admin')->group(function (): void {
+        Route::post('/action-center/scan', [ActionCenterController::class, 'scan'])->name('action-center.scan');
+        Route::post('/action-center/findings/{finding}/review', [ActionCenterController::class, 'review'])->name('action-center.findings.review');
+        Route::post('/action-center/findings/{finding}/dismiss', [ActionCenterController::class, 'dismiss'])->name('action-center.findings.dismiss');
+
         Route::post('/courier-loss/scan', [CourierLossController::class, 'scan'])->name('courier-loss.scan');
         Route::post('/courier-loss/flags/{flag}/review', [CourierLossController::class, 'review'])->name('courier-loss.flags.review');
 

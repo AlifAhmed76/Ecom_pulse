@@ -920,6 +920,120 @@ td.num {
     max-width: 360px;
 }
 
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.lang-btn {
+    border: 0;
+    background: transparent;
+    color: var(--ink-secondary);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.lang-btn.is-active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-xs);
+}
+
+.finding-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.finding-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+}
+
+.finding-card--critical {
+    border-left-color: var(--danger-ink);
+}
+
+.finding-card--high {
+    border-left-color: #D97706;
+}
+
+.finding-card--medium {
+    border-left-color: var(--info-ink);
+}
+
+.finding-card--low {
+    border-left-color: var(--ink-muted);
+}
+
+.finding-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.finding-card-title {
+    margin: 4px 0 2px;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.finding-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.finding-section {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.finding-section:last-child {
+    border-bottom: 0;
+}
+
+.finding-section-title {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+}
+
+.hypothesis-list {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.hypothesis-list li {
+    margin-bottom: 5px;
+}
+
+.input--compact {
+    min-width: 190px;
+    padding: 5px 9px;
+    font-size: 12.5px;
+}
+
 /* Responsive */
 @media (max-width: 860px) {
     .sidebar {

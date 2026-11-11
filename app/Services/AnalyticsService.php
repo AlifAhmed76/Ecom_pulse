@@ -414,14 +414,15 @@ class AnalyticsService
                 COUNT(*) AS total,
                 SUM(CASE WHEN o.status = 'shipped' THEN 1 ELSE 0 END) AS shipped,
                 SUM(CASE WHEN o.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
-                SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned
+                SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned,
+                SUM(CASE WHEN o.status = 'returned' THEN o.total ELSE 0 END) AS returned_value
             ")
             ->groupBy('o.courier')
             ->orderByDesc('total')
             ->orderBy('o.courier')
             ->get();
 
-        $couriers = $courierRows->map(function (object $r): array {
+        $couriers = $courierRows->map(function (object $r) use ($mixedCurrency): array {
             $total = (int) $r->total;
             $delivered = (int) $r->delivered;
             $returned = (int) $r->returned;
@@ -433,6 +434,7 @@ class AnalyticsService
                 'shipped' => (int) $r->shipped,
                 'delivered' => $delivered,
                 'returned' => $returned,
+                'returned_value' => $mixedCurrency ? null : round((float) $r->returned_value, 2),
                 'success_rate' => $insufficient ? null : round(($delivered / ($delivered + $returned)) * 100, 2),
                 'insufficient_data' => $insufficient,
             ];
@@ -458,6 +460,7 @@ class AnalyticsService
                 COUNT(*) AS assigned,
                 SUM(CASE WHEN o.status IN ('confirmed', 'shipped', 'delivered', 'returned') THEN 1 ELSE 0 END) AS confirmed_count,
                 SUM(CASE WHEN o.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                SUM(CASE WHEN o.status = 'cancelled' THEN o.total ELSE 0 END) AS cancelled_value,
                 SUM(CASE WHEN o.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
                 SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned
             ")
@@ -496,7 +499,7 @@ class AnalyticsService
             $respSamples[$empId][] = $mins;
         }
 
-        $employees = $empRows->map(function (object $r) use ($respSamples): array {
+        $employees = $empRows->map(function (object $r) use ($respSamples, $mixedCurrency): array {
             $empId = (int) $r->employee_id;
             $assigned = (int) $r->assigned;
             $confirmedCount = (int) $r->confirmed_count;
@@ -512,6 +515,7 @@ class AnalyticsService
                 'assigned' => $assigned,
                 'confirmed_count' => $confirmedCount,
                 'cancelled' => $cancelled,
+                'cancelled_value' => $mixedCurrency ? null : round((float) $r->cancelled_value, 2),
                 'delivered' => (int) $r->delivered,
                 'returned' => (int) $r->returned,
                 'confirmation_rate' => $assigned > 0 ? round(($confirmedCount / $assigned) * 100, 2) : 0.0,
@@ -844,6 +848,280 @@ class AnalyticsService
         return [
             'score' => $score,
             'indicators' => $indicators,
+        ];
+    }
+
+    /**
+     * Canonical supplementary aggregates for the R&D rule engine so rules use AnalyticsService numbers only.
+     *
+     * @return array<string, mixed>
+     */
+    public function rndSupplement(int $websiteId): array
+    {
+        if (! $this->websiteBelongsToTenant($websiteId)) {
+            throw new InvalidArgumentException('Selected website does not belong to this tenant.');
+        }
+
+        $tz = config('app.timezone', 'Asia/Dhaka');
+        $today = now($tz)->format('Y-m-d');
+        $cacheKey = 'rnd_sup:'.$websiteId.':'.$today;
+
+        return TenantCache::remember(
+            $this->tenantId,
+            $cacheKey,
+            fn (): array => $this->computeRndSupplement($websiteId, $tz)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeRndSupplement(int $websiteId, string $tz): array
+    {
+        $now = now($tz);
+        $nowEndStr = $now->copy()->endOfDay()->format('Y-m-d H:i:s');
+        $from30dStr = $now->copy()->subDays(29)->startOfDay()->format('Y-m-d H:i:s');
+        $from60dStr = $now->copy()->subDays(59)->startOfDay()->format('Y-m-d H:i:s');
+
+        $totalSiteOrders = DB::table('orders')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->count();
+
+        $siteOrders60d = DB::table('orders')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->where('ordered_at', '>=', $from60dStr)
+            ->where('ordered_at', '<=', $nowEndStr)
+            ->count();
+
+        // Trailing 8 prior 7-day blocks before the current 7-day window ([today-6d .. today])
+        $trailingWeeksCount = (int) config('lyp.rnd.r01_trailing_weeks', 8);
+        $weeklySeries = [];
+        $earliestFrom = $now->copy()->subDays(6 + ($trailingWeeksCount * 7))->startOfDay();
+        $priorEnd = $now->copy()->subDays(7)->endOfDay();
+
+        $priorCurrencies = DB::table('orders')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->where('ordered_at', '>=', $earliestFrom->format('Y-m-d H:i:s'))
+            ->where('ordered_at', '<=', $priorEnd->format('Y-m-d H:i:s'))
+            ->distinct()
+            ->pluck('currency')
+            ->map(fn ($c): string => strtoupper(trim((string) $c)))
+            ->filter(fn (string $c): bool => $c !== '')
+            ->all();
+        $weeklyMixed = count($priorCurrencies) > 1;
+
+        for ($w = $trailingWeeksCount; $w >= 1; $w--) {
+            $wEnd = $now->copy()->subDays($w * 7)->endOfDay();
+            $wStart = $wEnd->copy()->subDays(6)->startOfDay();
+
+            $agg = DB::table('orders')
+                ->where('tenant_id', $this->tenantId)
+                ->where('website_id', $websiteId)
+                ->where('ordered_at', '>=', $wStart->format('Y-m-d H:i:s'))
+                ->where('ordered_at', '<=', $wEnd->format('Y-m-d H:i:s'))
+                ->selectRaw("
+                    COUNT(*) AS orders_count,
+                    SUM(CASE WHEN status <> 'cancelled' THEN total ELSE 0 END) AS gross_sales
+                ")
+                ->first();
+
+            $weeklySeries[] = [
+                'from' => $wStart->format('Y-m-d'),
+                'to' => $wEnd->format('Y-m-d'),
+                'orders' => (int) ($agg->orders_count ?? 0),
+                'gross_sales' => $weeklyMixed ? null : round((float) ($agg->gross_sales ?? 0), 2),
+            ];
+        }
+
+        // Top 30-day revenue product stock cover (for R06)
+        $salesByProd30d = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->where('o.tenant_id', $this->tenantId)
+            ->where('o.website_id', $websiteId)
+            ->where('o.status', '<>', 'cancelled')
+            ->where('o.ordered_at', '>=', $from30dStr)
+            ->where('o.ordered_at', '<=', $nowEndStr)
+            ->whereNotNull('oi.product_id')
+            ->selectRaw('oi.product_id, SUM(oi.quantity) AS units_30d, SUM(oi.line_total) AS revenue_30d')
+            ->groupBy('oi.product_id')
+            ->get()
+            ->keyBy('product_id');
+
+        $activeProducts = DB::table('products')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->where('active', true)
+            ->get(['id', 'name', 'sku', 'stock', 'price', 'cost']);
+
+        $productStockCover = [];
+        foreach ($activeProducts as $prod) {
+            $pid = (int) $prod->id;
+            $sales = $salesByProd30d->get($pid);
+            $units30d = (int) ($sales->units_30d ?? 0);
+            $rev30d = round((float) ($sales->revenue_30d ?? 0.0), 2);
+            if ($units30d <= 0 && $rev30d <= 0.0) {
+                continue;
+            }
+            $stock = $prod->stock !== null ? (int) $prod->stock : null;
+            $coverDays = ($stock !== null && $units30d > 0)
+                ? round($stock / ($units30d / 30.0), 1)
+                : null;
+
+            $productStockCover[] = [
+                'product_id' => $pid,
+                'name' => (string) $prod->name,
+                'sku' => $prod->sku !== null ? (string) $prod->sku : null,
+                'stock' => $stock,
+                'units_30d' => $units30d,
+                'revenue_30d' => $rev30d,
+                'cover_days' => $coverDays,
+            ];
+        }
+        usort($productStockCover, static function (array $a, array $b): int {
+            $cmp = $b['revenue_30d'] <=> $a['revenue_30d'];
+
+            return $cmp !== 0 ? $cmp : ($b['units_30d'] <=> $a['units_30d']);
+        });
+
+        // Dead stock: active products with stock > 0 and 0 non-cancelled units in 60 days (for R07)
+        $deadDays = (int) config('lyp.rnd.r07_dead_days', 60);
+        $cutoffDeadStr = $now->copy()->subDays($deadDays - 1)->startOfDay()->format('Y-m-d H:i:s');
+        $soldProductIds60d = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->where('o.tenant_id', $this->tenantId)
+            ->where('o.website_id', $websiteId)
+            ->where('o.status', '<>', 'cancelled')
+            ->where('o.ordered_at', '>=', $cutoffDeadStr)
+            ->where('o.ordered_at', '<=', $nowEndStr)
+            ->whereNotNull('oi.product_id')
+            ->distinct()
+            ->pluck('oi.product_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        $soldSet = array_flip($soldProductIds60d);
+
+        $deadItems = [];
+        $deadMissingValueCount = 0;
+        foreach ($activeProducts as $prod) {
+            $pid = (int) $prod->id;
+            $stock = $prod->stock !== null ? (int) $prod->stock : 0;
+            if ($stock <= 0 || isset($soldSet[$pid])) {
+                continue;
+            }
+            $cost = $prod->cost !== null ? (float) $prod->cost : null;
+            $price = $prod->price !== null ? (float) $prod->price : null;
+            $unitVal = ($cost !== null && $cost > 0) ? $cost : (($price !== null && $price > 0) ? $price : null);
+
+            if ($unitVal === null) {
+                $deadMissingValueCount++;
+                continue;
+            }
+
+            $deadItems[] = [
+                'product_id' => $pid,
+                'name' => (string) $prod->name,
+                'sku' => $prod->sku !== null ? (string) $prod->sku : null,
+                'stock' => $stock,
+                'unit_value' => round($unitVal, 2),
+                'value_source' => ($cost !== null && $cost > 0) ? 'cost' : 'price',
+                'stock_value' => round($stock * $unitVal, 2),
+            ];
+        }
+        usort($deadItems, static fn (array $a, array $b): int => $b['stock_value'] <=> $a['stock_value']);
+
+        // Discounted vs undiscounted 30d cohort metrics (for R10)
+        $discCurrencies = DB::table('orders')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->where('ordered_at', '>=', $from30dStr)
+            ->where('ordered_at', '<=', $nowEndStr)
+            ->distinct()
+            ->pluck('currency')
+            ->map(fn ($c): string => strtoupper(trim((string) $c)))
+            ->filter(fn (string $c): bool => $c !== '')
+            ->all();
+        $discMixed = count($discCurrencies) > 1;
+
+        $cohortQuery = function (bool $discounted) use ($websiteId, $from30dStr, $nowEndStr, $discMixed): array {
+            $q = DB::table('orders')
+                ->where('tenant_id', $this->tenantId)
+                ->where('website_id', $websiteId)
+                ->where('ordered_at', '>=', $from30dStr)
+                ->where('ordered_at', '<=', $nowEndStr);
+
+            if ($discounted) {
+                $q->where('discount', '>', 0);
+            } else {
+                $q->where('discount', '<=', 0);
+            }
+
+            $agg = $q->selectRaw("
+                COUNT(*) AS orders_count,
+                SUM(CASE WHEN status <> 'cancelled' THEN 1 ELSE 0 END) AS non_cancelled_count,
+                SUM(CASE WHEN status <> 'cancelled' THEN total ELSE 0 END) AS gross_sales,
+                SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered_count,
+                SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned_count,
+                SUM(CASE WHEN status = 'returned' THEN total ELSE 0 END) AS returned_value
+            ")->first();
+
+            $orders = (int) ($agg->orders_count ?? 0);
+            $nonCancelled = (int) ($agg->non_cancelled_count ?? 0);
+            $delivered = (int) ($agg->delivered_count ?? 0);
+            $returned = (int) ($agg->returned_count ?? 0);
+            $completed = $delivered + $returned;
+            $gross = $discMixed ? null : round((float) ($agg->gross_sales ?? 0), 2);
+            $aov = ($discMixed || $nonCancelled <= 0) ? null : round($gross / $nonCancelled, 2);
+
+            return [
+                'orders' => $orders,
+                'non_cancelled' => $nonCancelled,
+                'gross_sales' => $gross,
+                'aov' => $aov,
+                'delivered' => $delivered,
+                'returned' => $returned,
+                'completed' => $completed,
+                'return_rate' => $completed > 0 ? round(($returned / $completed) * 100, 2) : 0.0,
+                'returned_value' => $discMixed ? null : round((float) ($agg->returned_value ?? 0), 2),
+            ];
+        };
+
+        $from7dStr = $now->copy()->subDays(6)->startOfDay()->format('Y-m-d H:i:s');
+        $cancelReason7dAgg = DB::table('orders')
+            ->where('tenant_id', $this->tenantId)
+            ->where('website_id', $websiteId)
+            ->where('status', 'cancelled')
+            ->where('ordered_at', '>=', $from7dStr)
+            ->where('ordered_at', '<=', $nowEndStr)
+            ->selectRaw("
+                COUNT(*) AS cancelled_total,
+                SUM(CASE WHEN cancel_reason IS NULL OR cancel_reason = '' THEN 1 ELSE 0 END) AS missing_reason
+            ")
+            ->first();
+        $canTotal7d = (int) ($cancelReason7dAgg->cancelled_total ?? 0);
+        $canMiss7d = (int) ($cancelReason7dAgg->missing_reason ?? 0);
+        $cancelMissingReasonPct7d = $canTotal7d > 0 ? round(($canMiss7d / $canTotal7d) * 100, 1) : 0.0;
+
+        return [
+            'website_id' => $websiteId,
+            'total_site_orders' => $totalSiteOrders,
+            'site_orders_60d' => $siteOrders60d,
+            'cancel_missing_reason_pct_7d' => $cancelMissingReasonPct7d,
+            'weekly_mixed_currency' => $weeklyMixed,
+            'weekly_gross_sales' => $weeklySeries,
+            'product_stock_cover' => $productStockCover,
+            'dead_stock' => [
+                'items' => $deadItems,
+                'missing_value_count' => $deadMissingValueCount,
+                'dead_days' => $deadDays,
+            ],
+            'discount_cohorts_30d' => [
+                'mixed_currency' => $discMixed,
+                'discounted' => $cohortQuery(true),
+                'undiscounted' => $cohortQuery(false),
+            ],
         ];
     }
 

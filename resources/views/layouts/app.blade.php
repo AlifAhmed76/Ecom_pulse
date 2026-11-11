@@ -41,6 +41,10 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                     <span>Courier &amp; Loss</span>
                 </a>
+                <a href="{{ route('action-center.index') }}" class="nav-link {{ request()->routeIs('action-center.*') ? 'is-active' : '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.5 1 1.3 1 2.3h6c0-1 .3-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
+                    <span>Action Center</span>
+                </a>
                 <a href="{{ route('websites.index') }}" class="nav-link {{ request()->routeIs('websites.*') ? 'is-active' : '' }}">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg>
                     <span>Websites</span>
@@ -94,6 +98,21 @@
 
             <div class="topbar-right">
                 @if($currentUser)
+                    @php
+                        $activeLocale = session('locale', 'en') === 'bn' ? 'bn' : 'en';
+                    @endphp
+                    <div class="lang-switch" aria-label="Language switch">
+                        <form method="POST" action="{{ route('locale.update') }}" class="topbar-form">
+                            @csrf
+                            <input type="hidden" name="locale" value="en">
+                            <button type="submit" class="lang-btn {{ $activeLocale === 'en' ? 'is-active' : '' }}">EN</button>
+                        </form>
+                        <form method="POST" action="{{ route('locale.update') }}" class="topbar-form">
+                            @csrf
+                            <input type="hidden" name="locale" value="bn">
+                            <button type="submit" class="lang-btn {{ $activeLocale === 'bn' ? 'is-active' : '' }}">বাংলা</button>
+                        </form>
+                    </div>
                     <div class="user-meta">
                         <span>{{ $currentUser->name }}</span>
                         <span class="badge badge--neutral">{{ ucfirst($currentUser->role) }}</span>

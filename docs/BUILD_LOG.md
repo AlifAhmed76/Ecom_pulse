@@ -193,3 +193,22 @@
   - MySQL `php -d extension=zip artisan migrate --force` for `000017`–`000018` pending XAMPP MariaDB startup on owner PC.
   - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
 - **Status:** `T10 DONE - tests: 133 passed, 0 failed (UNVERIFIED_AGAINST_REAL_DATA)`
+
+## T11: R&D rule engine and Action Center
+**Plan:**
+1. **What I understood:** Build the deterministic R&D Lab engine (`App\Support\Stats`, `App\Services\Rnd\RuleEngine` rules R01-R12, `FindingTemplates` in full handwritten English + Bangla with optional Bangla digits), backed solely by `AnalyticsService`, storing findings in `research_findings` with all 10 mandatory fields, deduplicating weekly per `(rule, website, subject, week)`, enforcing `<20` `insufficient data` info notices, severity & confidence rubrics, nightly `RunRndScan` scheduler, and an interactive Action Center + Finding Detail UI (without any LLM or experiments yet).
+2. **Files to create/change:** `database/migrations/2026_11_10_000019_create_research_findings_table.php`, `app/Models/ResearchFinding.php`, `config/lyp.php`, `app/Support/Stats.php`, `app/Services/AnalyticsService.php` (R&D snapshot helpers), `app/Services/Rnd/{RuleEngine,FindingTemplates}.php`, `app/Jobs/{RunRndScan,ScanAllTenantsRnd}.php`, `app/Http/Controllers/{ActionCenterController,LocaleController}.php`, `resources/views/action-center/{index,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `routes/{web,console}.php`, `public/css/app.css`, `tests/Unit/StatsTest.php`, `tests/Unit/RndTemplatesTest.php`, `tests/Feature/RndEngineAndActionCenterTest.php`.
+3. **What could go wrong:** Non-overlapping vs overlapping baseline windows (7d vs prior 28d/7d) could distort two-proportion z-tests; unguarded `< 20` cohorts could leak unreliable alerts or omit `"insufficient data"` info items; template placeholders or non-blaming employee wording (R05) could slip; analyst users must not mutate/dismiss findings; cross-tenant `finding`/`website` access must 404.
+4. **Mitigation:** Independent prior baselines in `AnalyticsService`, strict per-rule guards tested with known-value unit & synthetic boundary tests (above/below thresholds + `<20`), regex check asserting zero `{...}` placeholders across all 12 rules x 2 locales, and full RBAC + tenant-isolation tests.
+
+**Result (T11):**
+- **Files created/changed:** `database/migrations/2026_11_10_000019_create_research_findings_table.php`, `app/Models/ResearchFinding.php`, `config/lyp.php`, `app/Support/Stats.php`, `app/Services/AnalyticsService.php`, `app/Services/Rnd/{RuleEngine,FindingTemplates}.php`, `app/Jobs/{RunRndScan,ScanAllTenantsRnd}.php`, `app/Http/Controllers/{ActionCenterController,LocaleController}.php`, `resources/views/action-center/{index,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `routes/{web,console}.php`, `public/css/app.css`, `tests/Unit/{StatsTest,RndTemplatesTest}.php`, `tests/Feature/RndEngineAndActionCenterTest.php`, `docs/{PROGRESS,BUILD_LOG}.md`.
+- **Commands run + result:**
+  - `php artisan view:cache` / `php artisan view:clear` -> Blade views compiled with zero errors.
+  - `php artisan schedule:list` -> shows `30 2 * * * rnd-scan-all-tenants` (`Asia/Dhaka`).
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (144 tests, 2563 assertions)` (`StatsTest`: 4/4, `RndTemplatesTest`: 1/1, `RndEngineAndActionCenterTest`: 6/6).
+- **NOT RUN / UNVERIFIED:**
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` could not connect (`SQLSTATE[HY000] [2002]`, XAMPP MariaDB stopped on `127.0.0.1:3306`; migrations `000017`–`000019` pending MariaDB startup).
+  - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
+  - Owner subjective walkthrough ("read three findings aloud on demo data") deferred to owner PC check.
+- **Status:** `T11 DONE - tests: 144 passed, 0 failed`

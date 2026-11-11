@@ -2,6 +2,7 @@
 
 use App\Jobs\RefreshAllTenants;
 use App\Jobs\ScanAllTenantsRisk;
+use App\Jobs\ScanAllTenantsRnd;
 use App\Jobs\WorkerBeat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -28,6 +29,12 @@ Schedule::job(new RefreshAllTenants(), 'default')
 Schedule::job(new ScanAllTenantsRisk(), 'default')
     ->name('risk-scan-all-tenants')
     ->hourly()
+    ->withoutOverlapping();
+
+Schedule::job(new ScanAllTenantsRnd(), 'default')
+    ->name('rnd-scan-all-tenants')
+    ->dailyAt('02:30')
+    ->timezone(config('app.timezone', 'Asia/Dhaka'))
     ->withoutOverlapping();
 
 Schedule::command('lyp:prune')
