@@ -137,7 +137,13 @@ class ActionCenterController extends Controller
 
     public function show(Request $request, ResearchFinding $finding): View
     {
-        $finding->load(['website:id,name,currency', 'reviewer:id,name']);
+        $finding->load([
+            'website:id,name,currency',
+            'reviewer:id,name',
+            'experiments.owner:id,name',
+            'experiments.approver:id,name',
+            'experiments.results.recorder:id,name',
+        ]);
         [$locale, $bnDigits] = $this->resolveLocale($request);
 
         $rendered = FindingTemplates::renderFinding($finding, $locale, $bnDigits);

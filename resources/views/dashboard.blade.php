@@ -74,6 +74,10 @@
             <span class="quick-link-title">Action Center (R&amp;D Lab)</span>
             <span class="quick-link-desc">Review deterministic findings, hypotheses, and weekly actions in English &amp; Bangla.</span>
         </a>
+        <a href="{{ route('experiments.index') }}" class="quick-link-card">
+            <span class="quick-link-title">Experiments (R&amp;D Tracker)</span>
+            <span class="quick-link-desc">Approve hypotheses, lock baselines, record results, and capture validated lessons.</span>
+        </a>
         <a href="{{ route('websites.index') }}" class="quick-link-card">
             <span class="quick-link-title">Websites &amp; Credentials</span>
             <span class="quick-link-desc">Register store domains and issue signed API keys for connectors.</span>

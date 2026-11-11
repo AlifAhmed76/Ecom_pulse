@@ -6,6 +6,7 @@ use App\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ResearchFinding extends Model
 {
@@ -68,6 +69,11 @@ class ResearchFinding extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function experiments(): HasMany
+    {
+        return $this->hasMany(Experiment::class, 'finding_id')->latest();
     }
 
     public function isOpen(): bool

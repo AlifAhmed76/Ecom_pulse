@@ -143,6 +143,7 @@
                                 </div>
                                 <div class="inline-actions">
                                     <a href="{{ route('action-center.findings.show', $f) }}" class="btn btn--secondary btn--sm">{{ $labels['view_detail'] }}</a>
+                                    <a href="{{ route('experiments.create', ['finding_id' => $f->id]) }}" class="btn btn--primary btn--sm">{{ $labels['create_experiment'] }}</a>
                                     <a href="{{ $card['analytics_url'] }}" class="btn btn--ghost btn--sm">{{ $labels['view_analytics'] }}</a>
                                 </div>
                             </div>

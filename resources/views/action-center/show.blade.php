@@ -36,6 +36,7 @@
         <h1 class="page-title">{{ $rendered['title'] }}</h1>
     </div>
     <div class="page-actions">
+        <a href="{{ route('experiments.create', ['finding_id' => $finding->id]) }}" class="btn btn--primary">{{ $labels['create_experiment'] }}</a>
         <a href="{{ $analyticsUrl }}" class="btn btn--secondary">{{ $labels['view_analytics'] }}</a>
         <a href="{{ route('action-center.index') }}" class="btn btn--ghost">{{ $labels['back_to_ac'] }}</a>
         <form method="POST" action="{{ route('locale.update') }}">
@@ -229,6 +230,62 @@
                 </div>
             @endif
         </div>
+
+        @if($finding->experiments->isNotEmpty())
+            <div class="baseline-box">
+                <div class="panel-head">
+                    <h3 class="panel-title">Linked experiments ({{ $finding->experiments->count() }})</h3>
+                    <a href="{{ route('experiments.create', ['finding_id' => $finding->id]) }}" class="btn btn--secondary btn--sm">{{ $labels['create_experiment'] }}</a>
+                </div>
+                <div class="finding-list">
+                    @foreach($finding->experiments as $exp)
+                        @php
+                            $expBadge = match ($exp->status) {
+                                'completed' => 'badge--ok',
+                                'running' => 'badge--info',
+                                'approved' => 'badge--warn',
+                                'cancelled' => 'badge--danger',
+                                default => 'badge--neutral',
+                            };
+                        @endphp
+                        <div class="finding-card">
+                            <div class="finding-card-head">
+                                <div>
+                                    <div class="finding-meta">
+                                        <span class="badge {{ $expBadge }}">{{ ucfirst($exp->status) }}</span>
+                                        <span class="help-text">Owner: {{ $exp->owner?->name ?? 'Unassigned' }}</span>
+                                        @if($exp->approver)
+                                            <span class="help-text">&middot; Approved by {{ $exp->approver->name }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="finding-card-title">
+                                        <a href="{{ route('experiments.show', $exp) }}">#{{ $exp->id }} {{ $exp->title }}</a>
+                                    </div>
+                                </div>
+                                <a href="{{ route('experiments.show', $exp) }}" class="btn btn--secondary btn--sm">Open experiment</a>
+                            </div>
+                            @foreach($exp->results as $res)
+                                @php
+                                    $resBadge = match ($res->outcome) {
+                                        'validated' => 'badge--ok',
+                                        'rejected' => 'badge--danger',
+                                        default => 'badge--warn',
+                                    };
+                                    $mv = $res->measured['metric_value'] ?? null;
+                                @endphp
+                                <div class="mt-sm">
+                                    <span class="badge {{ $resBadge }}">Outcome: {{ ucfirst($res->outcome) }}</span>
+                                    @if($mv)
+                                        <span class="mono help-text">&nbsp;Measured: {{ $mv }}</span>
+                                    @endif
+                                    <p class="mt-sm"><strong>Lesson:</strong> {{ $res->lesson }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         @if($user->canManage() && $finding->isOpen())
             <div class="grid-2">

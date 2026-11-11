@@ -212,3 +212,22 @@
   - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
   - Owner subjective walkthrough ("read three findings aloud on demo data") deferred to owner PC check.
 - **Status:** `T11 DONE - tests: 144 passed, 0 failed`
+
+## T12: Experiment tracker
+**Plan:**
+1. **What I understood:** Close the R&D loop by adding `experiments` and `experiment_results` tables, an enforced state machine (`draft -> approved -> running -> completed|cancelled`) where an experiment cannot start without `owner|admin` approval, immutable baseline snapshots copied from a finding (or entered for manual experiments), two-proportion significance helper guarded against auto-declaring success below `min_sample`, finding outcome/lesson sync + visibility on finding detail, Action Center "Create experiment" links, and audit entries for approve/start/complete.
+2. **Files to create/change:** `database/migrations/2026_11_10_000020_create_experiments_table.php`, `database/migrations/2026_11_10_000021_create_experiment_results_table.php`, `app/Models/{Experiment,ExperimentResult,ResearchFinding}.php`, `app/Services/Rnd/ExperimentService.php`, `app/Http/Controllers/{ExperimentController,ActionCenterController}.php`, `routes/web.php`, `resources/views/experiments/{index,create,show}.blade.php`, `resources/views/action-center/{index,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `public/css/app.css`, `tests/Feature/ExperimentTrackerTest.php`.
+3. **What could go wrong:** Illegal workflow jumps (`draft -> running`, mutating `completed`/`cancelled`, `analyst` approving/starting), post-creation overwriting of `baseline`, significance helper claiming statistical success below `min_sample`, cross-tenant `finding_id`/`owner_user_id`/`experiment` IDOR, or missing finding outcome/lesson sync.
+4. **Mitigation:** Centralize transitions in `ExperimentService`, enforce `baseline` immutability via Eloquent `updating` guard, enforce `role:owner,admin` middleware on state transitions + server-derived `tenant_id`/`status`, guard significance helper behind `$controlN >= $minSample && $variantN >= $minSample`, and write comprehensive feature/unit tests covering every constraint.
+
+**Result (T12):**
+- **Files created/changed:** `database/migrations/2026_11_10_000020_create_experiments_table.php`, `database/migrations/2026_11_10_000021_create_experiment_results_table.php`, `app/Models/{Experiment,ExperimentResult,ResearchFinding}.php`, `app/Services/Rnd/{ExperimentService,FindingTemplates}.php`, `app/Http/Controllers/{ExperimentController,ActionCenterController}.php`, `routes/web.php`, `resources/views/experiments/{index,create,show}.blade.php`, `resources/views/action-center/{index,show}.blade.php`, `resources/views/{layouts/app,dashboard}.blade.php`, `public/css/app.css`, `tests/Feature/ExperimentTrackerTest.php`, `docs/{PROGRESS,BUILD_LOG}.md`.
+- **Commands run + result:**
+  - `php -l` across new/edited PHP files -> 0 syntax errors.
+  - `php artisan view:cache; php artisan view:clear` -> Blade views compiled with zero errors.
+  - `php -d extension=zip vendor/phpunit/phpunit/phpunit` -> `OK (150 tests, 2683 assertions)` (`ExperimentTrackerTest`: 6/6 passed).
+- **NOT RUN / UNVERIFIED:**
+  - `php -d extension=zip artisan migrate --force` on MySQL `lastyear` could not connect (`SQLSTATE[HY000] [2002]`, XAMPP MariaDB stopped on `127.0.0.1:3306`; migrations `000017`–`000021` pending MariaDB startup).
+  - `php artisan test` wrapper omits `-d extension=zip` in child PHP process until `php.ini` enables `extension=zip`; full suite verified via `php -d extension=zip vendor/phpunit/phpunit/phpunit`.
+  - Owner subjective walkthrough ("Run one full experiment on demo data from finding to lesson") deferred to owner PC check.
+- **Status:** `T12 DONE - tests: 150 passed, 0 failed`

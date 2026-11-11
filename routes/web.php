@@ -8,6 +8,7 @@ use App\Http\Controllers\CourierImportController;
 use App\Http\Controllers\CourierLossController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExperimentController;
 use App\Http\Controllers\FileAnalysisController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\LocaleController;
@@ -68,12 +69,20 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/courier-loss', [CourierLossController::class, 'index'])->name('courier-loss.index');
     Route::get('/action-center', [ActionCenterController::class, 'index'])->name('action-center.index');
     Route::get('/action-center/findings/{finding}', [ActionCenterController::class, 'show'])->name('action-center.findings.show');
+    Route::get('/experiments', [ExperimentController::class, 'index'])->name('experiments.index');
+    Route::get('/experiments/create', [ExperimentController::class, 'create'])->name('experiments.create');
+    Route::post('/experiments', [ExperimentController::class, 'store'])->name('experiments.store');
+    Route::get('/experiments/{experiment}', [ExperimentController::class, 'show'])->name('experiments.show');
     Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
     Route::middleware('role:owner,admin')->group(function (): void {
         Route::post('/action-center/scan', [ActionCenterController::class, 'scan'])->name('action-center.scan');
         Route::post('/action-center/findings/{finding}/review', [ActionCenterController::class, 'review'])->name('action-center.findings.review');
         Route::post('/action-center/findings/{finding}/dismiss', [ActionCenterController::class, 'dismiss'])->name('action-center.findings.dismiss');
+        Route::post('/experiments/{experiment}/approve', [ExperimentController::class, 'approve'])->name('experiments.approve');
+        Route::post('/experiments/{experiment}/start', [ExperimentController::class, 'start'])->name('experiments.start');
+        Route::post('/experiments/{experiment}/complete', [ExperimentController::class, 'complete'])->name('experiments.complete');
+        Route::post('/experiments/{experiment}/cancel', [ExperimentController::class, 'cancel'])->name('experiments.cancel');
 
         Route::post('/courier-loss/scan', [CourierLossController::class, 'scan'])->name('courier-loss.scan');
         Route::post('/courier-loss/flags/{flag}/review', [CourierLossController::class, 'review'])->name('courier-loss.flags.review');

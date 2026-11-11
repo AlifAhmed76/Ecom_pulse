@@ -1034,6 +1034,62 @@ td.num {
     font-size: 12.5px;
 }
 
+.textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.mt-sm {
+    margin-top: 10px;
+}
+
+.exp-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.exp-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-subtle);
+    color: var(--ink-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.exp-step.is-done {
+    background: var(--ok-bg);
+    border-color: var(--ok-border);
+    color: var(--ok-ink);
+}
+
+.exp-step.is-active {
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+    color: var(--accent);
+}
+
+.exp-step.is-cancelled {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger-ink);
+}
+
+.baseline-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
 /* Responsive */
 @media (max-width: 860px) {
     .sidebar {
